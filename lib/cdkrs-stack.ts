@@ -1,5 +1,6 @@
-import * as cdk from 'aws-cdk-lib';
-import { Construct } from 'constructs';
+import * as cdk from "aws-cdk-lib";
+import { Construct } from "constructs";
+import { RustFunction } from "cargo-lambda-cdk";
 // import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class CdkrsStack extends cdk.Stack {
@@ -12,5 +13,16 @@ export class CdkrsStack extends cdk.Stack {
     // const queue = new sqs.Queue(this, 'CdkrsQueue', {
     //   visibilityTimeout: cdk.Duration.seconds(300)
     // });
+
+    // new cdk.aws_s3.Bucket(this, "MyFirstBucket", {
+    //   versioned: true,
+    // });
+
+    new RustFunction(this, "function-package-name", {
+      manifestPath: "functions/hw/Cargo.toml",
+      // layers: [
+      //   extensionLayer
+      // ],
+    });
   }
 }
