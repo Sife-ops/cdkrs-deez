@@ -1,29 +1,44 @@
-// import * as apigateway from 'aws-cdk-lib/aws-apigateway';
+import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { RustFunction } from "cargo-lambda-cdk";
-// import * as sqs from 'aws-cdk-lib/aws-sqs';
 
 export class CdkrsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // The code that defines your stack goes here
+    const api = new apigateway.RestApi(this, "api", {
+      // description: "example api gateway",
+      // deployOptions: {
+      //   stageName: "dev",
+      // },
+      // 👇 enable CORS
+      defaultCorsPreflightOptions: {
+        allowHeaders: [
+          "Content-Type",
+          "X-Amz-Date",
+          "Authorization",
+          "X-Api-Key",
+        ],
+        allowMethods: ["OPTIONS", "GET", "POST", "PUT", "PATCH", "DELETE"],
+        allowCredentials: true,
+        allowOrigins: ["http://localhost:3000"],
+      },
+      endpointTypes: [apigateway.EndpointType.REGIONAL],
+    });
 
-    // example resource
-    // const queue = new sqs.Queue(this, 'CdkrsQueue', {
-    //   visibilityTimeout: cdk.Duration.seconds(300)
-    // });
+    const hwr = api.root.addResource("hw");
 
-    // new cdk.aws_s3.Bucket(this, "MyFirstBucket", {
-    //   versioned: true,
-    // });
-
-    new RustFunction(this, "hw", {
+    const hwl = new RustFunction(this, "hw", {
       manifestPath: "functions/hw/Cargo.toml",
       // layers: [
       //   extensionLayer
       // ],
     });
+
+    hwr.addMethod(
+      "GET",
+      new apigateway.LambdaIntegration(hwl, { proxy: true })
+    );
   }
 }
