@@ -1,3 +1,4 @@
+// import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { RustFunction } from "cargo-lambda-cdk";
@@ -18,7 +19,7 @@ export class CdkrsStack extends cdk.Stack {
     //   versioned: true,
     // });
 
-    new RustFunction(this, "function-package-name", {
+    new RustFunction(this, "hw", {
       manifestPath: "functions/hw/Cargo.toml",
       // layers: [
       //   extensionLayer
