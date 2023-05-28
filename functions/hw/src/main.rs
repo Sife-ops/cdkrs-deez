@@ -1,4 +1,9 @@
+mod ddb;
+mod entity;
+
+// use aws_sdk_dynamodb::Client;
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
+// use crate::ddb::DdbEntity;
 
 /// This is the main body for the function.
 /// Write your code inside it.
@@ -11,6 +16,19 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
         .and_then(|params| params.first("name"))
         .unwrap_or("world");
     let message = format!("Hello {who}, this is an AWS Lambda HTTP request");
+
+    // let sc = aws_config::load_from_env().await;
+    // let c = Client::new(&sc);
+
+    // entity::Prediction {
+    //     condition: "a".to_string(),
+    //     created_at: "a".to_string(),
+    //     prediction_id: "a".to_string(),
+    //     user_id: "a".to_string(),
+    // }
+    // .put(&c)
+    // .send()
+    // .await?;
 
     // Return something that implements IntoResponse.
     // It will be serialized to the right response event automatically by the runtime
