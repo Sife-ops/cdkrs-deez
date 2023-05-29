@@ -747,6 +747,7 @@ checksum = "c4a1e36c821dbe04574f602848a19f742f4fb3c98d40449f11bcad18d6b17421"
 name = "hw"
 version = "0.1.0"
 dependencies = [
+ "aws-sdk-dynamodb",
  "lambda_http",
  "lambda_runtime",
  "lib",

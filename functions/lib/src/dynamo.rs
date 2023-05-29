@@ -3,7 +3,7 @@ use aws_sdk_dynamodb::types::AttributeValue;
 use aws_sdk_dynamodb::Client;
 use std::collections::HashMap;
 
-// todo: expose
+// todo: don't use enum
 #[derive(Eq, PartialEq, Hash, Debug)]
 pub enum IndexName {
     Primary,
@@ -60,7 +60,7 @@ pub trait DdbEntity {
         let entity_schema = self.entity_schema();
         let mut m = HashMap::new();
         m.insert(
-            "_entity".to_string(),
+            format!("_entity"),
             AttributeValue::S(entity_schema.entity.clone()),
         );
         // indexes
@@ -116,19 +116,51 @@ mod tests {
     use crate::entity::prediction::Prediction;
 
     #[test]
-    fn av() {
-        let p = Prediction {
-            prediction_id: "c".to_string(),
-            user_id: "d".to_string(),
+    fn av1() {
+        let p1 = Prediction {
+            prediction_id: format!("a"),
+            user_id: format!("b"),
             ..Default::default()
         };
 
-        println!("{:?}", p);
-
-        let avm = p.entity_to_av_map();
+        let avm = p1.entity_to_av_map();
         println!("{:?}", avm);
 
-        let pkv = avm.get("pk").unwrap().as_s().unwrap();
-        assert_eq!(pkv, "$Cdkrs#Prediction#predictionid_c");
+        assert_eq!(
+            avm.get("pk").unwrap().as_s().unwrap(),
+            "$Cdkrs#Prediction#predictionid_a"
+        );
+        assert_eq!(avm.get("sk").unwrap().as_s().unwrap(), "$Prediction");
+        assert_eq!(
+            avm.get("gsi1pk").unwrap().as_s().unwrap(),
+            "$Cdkrs#Prediction#userid_b"
+        );
+        assert_eq!(
+            avm.get("gsi1sk").unwrap().as_s().unwrap(),
+            "$Prediction#predictionid_a"
+        );
+        assert_eq!(
+            avm.get("gsi2pk").unwrap().as_s().unwrap(),
+            "$Cdkrs#Prediction#predictionid_a"
+        );
+        assert_eq!(avm.get("gsi2sk").unwrap().as_s().unwrap(), "$Prediction");
+    }
+
+    #[test]
+    fn av2() {
+        let p1 = Prediction {
+            prediction_id: format!("a"),
+            user_id: format!("b"),
+            condition: Some(format!("c")),
+            created_at: Some(format!("d")),
+        };
+
+        let avm = p1.entity_to_av_map();
+        println!("{:?}", avm);
+
+        assert_eq!(avm.get("predictionid").unwrap().as_s().unwrap(), "a");
+        assert_eq!(avm.get("userid").unwrap().as_s().unwrap(), "b");
+        assert_eq!(avm.get("condition").unwrap().as_s().unwrap(), "c");
+        assert_eq!(avm.get("createdat").unwrap().as_s().unwrap(), "d");
     }
 }

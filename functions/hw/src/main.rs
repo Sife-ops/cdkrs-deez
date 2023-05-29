@@ -1,6 +1,8 @@
+use aws_sdk_dynamodb::types::AttributeValue;
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
-// use lib::add;
-// use lib::entity::prediction;
+use lib::dynamo::DdbEntity;
+use lib::entity::prediction::Prediction;
+use lib::service::ddb;
 
 /// This is the main body for the function.
 /// Write your code inside it.
@@ -12,8 +14,30 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
         .query_string_parameters_ref()
         .and_then(|params| params.first("name"))
         .unwrap_or("world");
-    // let a = add(1, 1);
-    let message = format!("Hello {who}, this is an AWS Lambda HTTP request");
+
+    let c = ddb().await;
+
+    Prediction {
+        prediction_id: format!("a"),
+        user_id: format!("b"),
+        condition: Some(format!("c")),
+        created_at: Some(format!("d")),
+    }
+    .put(&c)
+    .send()
+    .await?;
+
+    // let es = p.entity_schema().table;
+
+    // let req = c
+    //     .put_item()
+    //     .table_name("cdkrs-table")
+    //     .item("pk", AttributeValue::S("lol".to_string()))
+    //     .item("sk", AttributeValue::S("ok".to_string()));
+    // let res = req.send().await?;
+    // println!("res {:?}", res);
+
+    let message = format!("Hello {who}, this is an AWS Lambda HTTP request.");
 
     // Return something that implements IntoResponse.
     // It will be serialized to the right response event automatically by the runtime

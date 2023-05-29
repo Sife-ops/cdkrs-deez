@@ -25,13 +25,29 @@ export class CdkrsStack extends cdk.Stack {
       pointInTimeRecovery: true,
     });
 
-    // table.addLocalSecondaryIndex({
-    //   indexName: 'statusIndex',
-    //   sortKey: {name: 'status', type: dynamodb.AttributeType.STRING},
-    //   projectionType: dynamodb.ProjectionType.ALL,
-    // });
+    table.addGlobalSecondaryIndex({
+      indexName: "gsi1",
+      partitionKey: {
+        name: "gsi1pk",
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: "gsi1sk",
+        type: dynamodb.AttributeType.STRING,
+      },
+    });
 
-    // todo: table.addGlobalSecondaryIndex
+    table.addGlobalSecondaryIndex({
+      indexName: "gsi2",
+      partitionKey: {
+        name: "gsi2pk",
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: {
+        name: "gsi2sk",
+        type: dynamodb.AttributeType.STRING,
+      },
+    });
 
     /**
      * example: https://github.com/bobbyhadz/aws-cdk-http-api-apigateway-v2-example/blob/cdk-v2/lib/cdk-starter-stack.ts
@@ -63,10 +79,13 @@ export class CdkrsStack extends cdk.Stack {
     const hwl = new RustFunction(this, "hw", {
       manifestPath: "functions/hw/Cargo.toml",
       // todo: https://github.com/cargo-lambda/cargo-lambda-cdk#rust-extension
-      bundling: {
-        environment: {
-          TABLE_NAME: table.tableName,
-        },
+      // bundling: {
+      //   environment: { // use case???
+      //     TABLE_NAME: table.tableName,
+      //   },
+      // },
+      environment: {
+        TABLE_NAME: table.tableName,
       },
     });
 
