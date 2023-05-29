@@ -1,4 +1,4 @@
-use crate::ddb::{Attribute, Composite, DdbEntity, EntitySchema, Index, IndexName, Key};
+use crate::dynamo::{Attribute, Composite, DdbEntity, EntitySchema, Index, IndexName, Key};
 use maplit::hashmap;
 
 #[derive(Default, Debug)]

@@ -113,11 +113,11 @@ pub trait DdbEntity {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::entity;
+    use crate::entity::prediction::Prediction;
 
     #[test]
     fn av() {
-        let p = entity::Prediction {
+        let p = Prediction {
             prediction_id: "c".to_string(),
             user_id: "d".to_string(),
             ..Default::default()
