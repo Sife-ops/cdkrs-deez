@@ -27,10 +27,7 @@ impl Key {
     fn _join_composite(&self) -> String {
         let mut s = String::new();
         for composite in self.composite.iter() {
-            s.push_str("#");
-            s.push_str(&composite.name);
-            s.push_str("_");
-            s.push_str(&composite.value);
+            s.push_str(&format!("#{}_{}", &composite.name, &composite.value))
         }
         s
     }
@@ -69,17 +66,24 @@ pub trait DdbEntity {
         // indexes
         for (_, index) in &entity_schema.indices {
             // partition key
-            let mut pk = String::from("$");
-            pk.push_str(&entity_schema.service);
-            pk.push_str("#");
-            pk.push_str(&entity_schema.entity);
-            pk.push_str(&index.partition_key._join_composite());
-            m.insert(index.partition_key.field.clone(), AttributeValue::S(pk));
+            m.insert(
+                index.partition_key.field.clone(),
+                AttributeValue::S(format!(
+                    "${}#{}{}",
+                    &entity_schema.service,
+                    &entity_schema.entity,
+                    &index.partition_key._join_composite()
+                )),
+            );
             // sort key
-            let mut sk = String::from("$");
-            sk.push_str(&entity_schema.entity);
-            sk.push_str(&index.sort_key._join_composite());
-            m.insert(index.sort_key.field.clone(), AttributeValue::S(sk));
+            m.insert(
+                index.sort_key.field.clone(),
+                AttributeValue::S(format!(
+                    "${}{}",
+                    &entity_schema.entity,
+                    &index.sort_key._join_composite()
+                )),
+            );
         }
         // attributes
         for (k, v) in &entity_schema.attributes {
@@ -116,14 +120,15 @@ mod tests {
         let p = entity::Prediction {
             prediction_id: "c".to_string(),
             user_id: "d".to_string(),
-            condition: None,
-            created_at: None,
+            ..Default::default()
         };
 
+        println!("{:?}", p);
+
         let avm = p.entity_to_av_map();
+        println!("{:?}", avm);
 
         let pkv = avm.get("pk").unwrap().as_s().unwrap();
-        // println!("{}", pkv);
         assert_eq!(pkv, "$Cdkrs#Prediction#predictionid_c");
     }
 }
