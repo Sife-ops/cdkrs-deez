@@ -3,33 +3,32 @@ use aws_sdk_dynamodb::types::AttributeValue;
 use aws_sdk_dynamodb::Client;
 use std::collections::HashMap;
 
-// todo: don't use enum
-#[derive(Eq, PartialEq, Hash, Debug)]
-pub enum IndexName {
-    Primary,
-    Gsi1,
-    Gsi2,
-}
-
-#[derive(Debug)]
-pub struct Composite {
-    pub name: String,
-    pub value: String,
-}
-
 #[derive(Debug)]
 pub struct Key {
     pub field: String,
-    pub composite: Vec<Composite>,
+    pub composite: Vec<String>,
 }
 
 impl Key {
-    fn _join_composite(&self) -> String {
-        let mut s = String::new();
+    fn _join_composite(&self, es: &EntitySchema) -> String {
+        let mut c = String::new();
         for composite in self.composite.iter() {
-            s.push_str(&format!("#{}_{}", &composite.name, &composite.value))
+            c.push_str(&format!("#{}", &composite));
+            match es.attributes.get(composite).unwrap() {
+                Attribute::DdbString(v) => {
+                    // todo: maybe enum method
+                    c.push_str(&format!("_{}", v.get().unwrap()));
+                }
+                Attribute::DdbNumber(v) => {
+                    // todo: maybe some usize??
+                    c.push_str(&format!("_{}", v.get().unwrap()));
+                }
+                Attribute::DdbBoolean(_) => {
+                    panic!("don't use booleans for an id stupid"); // todo
+                }
+            }
         }
-        s
+        c
     }
 }
 
@@ -39,17 +38,35 @@ pub struct Index {
     pub sort_key: Key,
 }
 
+#[derive(Debug)]
+pub struct Value<T> {
+    pub value: Option<T>,
+    pub default: Option<T>,
+}
+
+impl<T: Clone> Value<T> {
+    fn get(&self) -> Option<T> {
+        if let Some(s) = self.value.clone() {
+            return Some(s);
+        } else if let Some(s) = self.default.clone() {
+            return Some(s);
+        }
+        None
+    }
+}
+
+#[derive(Debug)]
 pub enum Attribute {
-    DdbString(Option<String>),
-    DdbBoolean(Option<bool>),
-    DdbNumber(Option<i64>),
+    DdbString(Value<String>),
+    DdbBoolean(Value<bool>),
+    DdbNumber(Value<i64>),
 }
 
 pub struct EntitySchema {
     pub table: String,
     pub service: String,
     pub entity: String,
-    pub indices: HashMap<IndexName, Index>,
+    pub indices: HashMap<String, Index>,
     pub attributes: HashMap<String, Attribute>,
 }
 
@@ -63,6 +80,26 @@ pub trait DdbEntity {
             format!("_entity"),
             AttributeValue::S(entity_schema.entity.clone()),
         );
+        // attributes
+        for (name, attr) in &entity_schema.attributes {
+            match attr {
+                Attribute::DdbString(v) => {
+                    if let Some(s) = v.get() {
+                        m.insert(name.to_string(), AttributeValue::S(s));
+                    }
+                }
+                Attribute::DdbBoolean(v) => {
+                    if let Some(b) = v.get() {
+                        m.insert(name.to_string(), AttributeValue::Bool(b));
+                    }
+                }
+                Attribute::DdbNumber(v) => {
+                    if let Some(b) = v.get() {
+                        m.insert(name.to_string(), AttributeValue::N(b.to_string()));
+                    }
+                }
+            };
+        }
         // indexes
         for (_, index) in &entity_schema.indices {
             // partition key
@@ -72,7 +109,7 @@ pub trait DdbEntity {
                     "${}#{}{}",
                     &entity_schema.service,
                     &entity_schema.entity,
-                    &index.partition_key._join_composite()
+                    &index.partition_key._join_composite(&entity_schema)
                 )),
             );
             // sort key
@@ -81,21 +118,9 @@ pub trait DdbEntity {
                 AttributeValue::S(format!(
                     "${}{}",
                     &entity_schema.entity,
-                    &index.sort_key._join_composite()
+                    &index.sort_key._join_composite(&entity_schema)
                 )),
             );
-        }
-        // attributes
-        for (k, v) in &entity_schema.attributes {
-            match v {
-                Attribute::DdbString(o) => {
-                    if let Some(s) = o {
-                        m.insert(k.to_string(), AttributeValue::S(s.to_string()));
-                    }
-                }
-                Attribute::DdbBoolean(_) => {} // todo
-                Attribute::DdbNumber(_) => {}  // todo
-            };
         }
         m
     }
@@ -118,8 +143,8 @@ mod tests {
     #[test]
     fn av1() {
         let p1 = Prediction {
-            prediction_id: format!("a"),
-            user_id: format!("b"),
+            prediction_id: Some(format!("a")),
+            user_id: Some(format!("b")),
             ..Default::default()
         };
 
@@ -149,8 +174,8 @@ mod tests {
     #[test]
     fn av2() {
         let p1 = Prediction {
-            prediction_id: format!("a"),
-            user_id: format!("b"),
+            prediction_id: Some(format!("a")),
+            user_id: Some(format!("b")),
             condition: Some(format!("c")),
             created_at: Some(format!("d")),
         };

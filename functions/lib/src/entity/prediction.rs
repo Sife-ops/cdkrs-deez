@@ -1,11 +1,11 @@
-use crate::dynamo::{Attribute, Composite, DdbEntity, EntitySchema, Index, IndexName, Key};
+use crate::dynamo::{Attribute, DdbEntity, EntitySchema, Index, Key, Value};
 use maplit::hashmap;
 use std::env;
 
 #[derive(Default, Debug)]
 pub struct Prediction {
-    pub prediction_id: String,
-    pub user_id: String,
+    pub prediction_id: Option<String>,
+    pub user_id: Option<String>,
     pub condition: Option<String>,
     pub created_at: Option<String>,
 }
@@ -18,14 +18,11 @@ impl DdbEntity for Prediction {
             service: format!("Cdkrs"),
             entity: format!("Prediction"),
             indices: hashmap! {
-                IndexName::Primary => {
+                format!("primary") => {
                     Index {
                         partition_key: Key {
                             field: format!("pk"),
-                            composite: vec![Composite {
-                                name: format!("predictionid"),
-                                value: self.prediction_id.to_string(),
-                            }],
+                            composite: vec![format!("predictionid")],
                         },
                         sort_key: Key {
                             field: format!("sk"),
@@ -33,32 +30,23 @@ impl DdbEntity for Prediction {
                         },
                     }
                 },
-                IndexName::Gsi1 => {
+                format!("gsi1") => {
                     Index {
                         partition_key: Key {
                             field: format!("gsi1pk"),
-                            composite: vec![Composite {
-                                name: format!("userid"),
-                                value: self.user_id.to_string(),
-                            }],
+                            composite: vec![format!("userid")],
                         },
                         sort_key: Key {
                             field: format!("gsi1sk"),
-                            composite: vec![Composite {
-                                name: format!("predictionid"),
-                                value: self.prediction_id.to_string(),
-                            }],
+                            composite: vec![format!("predictionid")],
                         },
                     }
                 },
-                IndexName::Gsi2 => {
+                format!("gsi2") => {
                     Index {
                         partition_key: Key {
                             field: format!("gsi2pk"),
-                            composite: vec![Composite {
-                                name: format!("predictionid"),
-                                value: self.prediction_id.to_string(),
-                            }],
+                            composite: vec![format!("predictionid")],
                         },
                         sort_key: Key {
                             field: format!("gsi2sk"),
@@ -68,10 +56,22 @@ impl DdbEntity for Prediction {
                 },
             },
             attributes: hashmap! {
-                format!("predictionid") => Attribute::DdbString(Some(self.prediction_id.clone())),
-                format!("userid") => Attribute::DdbString(Some(self.user_id.clone())),
-                format!("condition") => Attribute::DdbString(self.condition.clone()),
-                format!("createdat") => Attribute::DdbString(self.created_at.clone()),
+                format!("predictionid") => Attribute::DdbString(Value {
+                    value: self.prediction_id.clone(),
+                    default: Some(format!("todo: uuid")),
+                }),
+                format!("userid") => Attribute::DdbString(Value {
+                    value: self.user_id.clone(),
+                    default: None,
+                }),
+                format!("condition") => Attribute::DdbString(Value {
+                    value: self.condition.clone(),
+                    default: None,
+                }),
+                format!("createdat") => Attribute::DdbString(Value {
+                    value: self.created_at.clone(),
+                    default: None,
+                }),
             },
         }
     }
