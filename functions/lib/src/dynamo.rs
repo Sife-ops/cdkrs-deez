@@ -13,20 +13,11 @@ impl Key {
     fn _join_composite(&self, es: &EntitySchema) -> String {
         let mut c = String::new();
         for composite in self.composite.iter() {
-            c.push_str(&format!("#{}", &composite));
-            match es.attributes.get(composite).unwrap() {
-                Attribute::DdbString(v) => {
-                    // todo: maybe enum method
-                    c.push_str(&format!("_{}", v.get().unwrap()));
-                }
-                Attribute::DdbNumber(v) => {
-                    // todo: maybe some usize??
-                    c.push_str(&format!("_{}", v.get().unwrap()));
-                }
-                Attribute::DdbBoolean(_) => {
-                    panic!("don't use booleans for an id stupid"); // todo
-                }
-            }
+            c.push_str(&format!(
+                "#{}_{}",
+                &composite,
+                es.attributes.get(composite).unwrap().get_string()
+            ));
         }
         c
     }
@@ -58,8 +49,24 @@ impl<T: Clone> Value<T> {
 #[derive(Debug)]
 pub enum Attribute {
     DdbString(Value<String>),
-    DdbBoolean(Value<bool>),
     DdbNumber(Value<i64>),
+    DdbBoolean(Value<bool>),
+}
+
+impl Attribute {
+    fn get_string(&self) -> String {
+        match self {
+            Attribute::DdbString(y) => {
+                return y.get().unwrap();
+            }
+            Attribute::DdbNumber(y) => {
+                return y.get().unwrap().to_string();
+            }
+            Attribute::DdbBoolean(_) => {
+                panic!("don't use boolean for id stupid");
+            }
+        }
+    }
 }
 
 pub struct EntitySchema {
