@@ -1,4 +1,5 @@
 use aws_sdk_dynamodb::operation::put_item::builders::PutItemFluentBuilder;
+use aws_sdk_dynamodb::operation::query::builders::QueryFluentBuilder;
 use aws_sdk_dynamodb::types::AttributeValue;
 use aws_sdk_dynamodb::Client;
 use std::collections::HashMap;
@@ -10,13 +11,14 @@ pub struct Key {
 }
 
 impl Key {
-    fn _join_composite(&self, es: &EntitySchema) -> String {
+    // todo: prop-drill shittiness
+    fn _join_composite(&self, attrs: &HashMap<String, Attribute>, default: &DefaultAttr) -> String {
         let mut c = String::new();
         for composite in self.composite.iter() {
             c.push_str(&format!(
                 "#{}_{}",
                 &composite,
-                es.attributes.get(composite).unwrap().get_string()
+                attrs.get(composite).unwrap().get_string(default)
             ));
         }
         c
@@ -32,18 +34,8 @@ pub struct Index {
 #[derive(Debug)]
 pub struct Value<T> {
     pub value: Option<T>,
-    pub default: Option<T>,
-}
-
-impl<T: Clone> Value<T> {
-    fn get(&self) -> Option<T> {
-        if let Some(s) = self.value.clone() {
-            return Some(s);
-        } else if let Some(s) = self.default.clone() {
-            return Some(s);
-        }
-        None
-    }
+    pub required: bool,
+    pub default: Option<T>, // todo: use closures
 }
 
 #[derive(Debug)]
@@ -53,14 +45,35 @@ pub enum Attribute {
     DdbBoolean(Value<bool>),
 }
 
+#[derive(PartialEq)]
+pub enum DefaultAttr {
+    Use,
+    Ignore,
+}
+
+impl<T: Clone> Value<T> {
+    fn get(&self, default: &DefaultAttr) -> Option<T> {
+        if let Some(s) = self.value.clone() {
+            return Some(s);
+        } else if self.required {
+            return None;
+        } else if default == &DefaultAttr::Ignore {
+            return None;
+        } else if let Some(s) = self.default.clone() {
+            return Some(s);
+        }
+        None
+    }
+}
+
 impl Attribute {
-    fn get_string(&self) -> String {
+    fn get_string(&self, default: &DefaultAttr) -> String {
         match self {
             Attribute::DdbString(y) => {
-                return y.get().unwrap();
+                return y.get(default).unwrap();
             }
             Attribute::DdbNumber(y) => {
-                return y.get().unwrap().to_string();
+                return y.get(default).unwrap().to_string();
             }
             Attribute::DdbBoolean(_) => {
                 panic!("don't use boolean for id stupid");
@@ -69,54 +82,57 @@ impl Attribute {
     }
 }
 
-pub struct EntitySchema {
+pub struct EntityInfo {
     pub table: String,
     pub service: String,
     pub entity: String,
-    pub indices: HashMap<String, Index>,
-    pub attributes: HashMap<String, Attribute>,
 }
 
 pub trait DdbEntity {
-    fn entity_schema(&self) -> EntitySchema;
+    fn info(&self) -> EntityInfo;
 
-    fn entity_to_av_map(&self) -> HashMap<String, AttributeValue> {
-        let entity_schema = self.entity_schema();
+    fn index_schema(&self) -> HashMap<String, Index>;
+
+    fn attributes(&self) -> HashMap<String, Attribute>;
+
+    fn entity_to_av_map(&self, default: &DefaultAttr) -> HashMap<String, AttributeValue> {
+        let info = self.info();
         let mut m = HashMap::new();
-        m.insert(
-            format!("_entity"),
-            AttributeValue::S(entity_schema.entity.clone()),
-        );
+        m.insert(format!("_entity"), AttributeValue::S(info.entity.clone()));
+
         // attributes
-        for (name, attr) in &entity_schema.attributes {
+        let attrs = self.attributes();
+        for (name, attr) in &attrs {
             match attr {
                 Attribute::DdbString(v) => {
-                    if let Some(s) = v.get() {
+                    if let Some(s) = v.get(default) {
                         m.insert(name.to_string(), AttributeValue::S(s));
                     }
                 }
                 Attribute::DdbBoolean(v) => {
-                    if let Some(b) = v.get() {
-                        m.insert(name.to_string(), AttributeValue::Bool(b));
+                    if let Some(s) = v.get(default) {
+                        m.insert(name.to_string(), AttributeValue::Bool(s));
                     }
                 }
                 Attribute::DdbNumber(v) => {
-                    if let Some(b) = v.get() {
-                        m.insert(name.to_string(), AttributeValue::N(b.to_string()));
+                    if let Some(s) = v.get(default) {
+                        m.insert(name.to_string(), AttributeValue::N(s.to_string()));
                     }
                 }
             };
         }
+
         // indexes
-        for (_, index) in &entity_schema.indices {
+        let is = self.index_schema();
+        for (_, index) in &is {
             // partition key
             m.insert(
                 index.partition_key.field.clone(),
                 AttributeValue::S(format!(
                     "${}#{}{}",
-                    &entity_schema.service,
-                    &entity_schema.entity,
-                    &index.partition_key._join_composite(&entity_schema)
+                    info.service,
+                    info.entity,
+                    index.partition_key._join_composite(&attrs, &DefaultAttr::Use),
                 )),
             );
             // sort key
@@ -124,8 +140,8 @@ pub trait DdbEntity {
                 index.sort_key.field.clone(),
                 AttributeValue::S(format!(
                     "${}{}",
-                    &entity_schema.entity,
-                    &index.sort_key._join_composite(&entity_schema)
+                    info.entity,
+                    index.sort_key._join_composite(&attrs, &DefaultAttr::Use)
                 )),
             );
         }
@@ -133,13 +149,20 @@ pub trait DdbEntity {
     }
 
     fn put(&self, c: &Client) -> PutItemFluentBuilder {
-        let mut req = c.put_item().table_name(self.entity_schema().table);
-        let m = self.entity_to_av_map();
+        let mut req = c.put_item().table_name(self.info().table);
+        let m = self.entity_to_av_map(&DefaultAttr::Use);
         for (k, v) in &m {
             req = req.item(k, v.clone());
         }
         req
     }
+
+    // fn q(&self, c: &Client) -> bool {
+    //     let mut req = c.query().table_name(self.table_name());
+    //     let a = self.entity_schema();
+    //     let b = self.entity_to_av_map();
+    //     true
+    // }
 }
 
 #[cfg(test)]
@@ -155,7 +178,7 @@ mod tests {
             ..Default::default()
         };
 
-        let avm = p1.entity_to_av_map();
+        let avm = p1.entity_to_av_map(&DefaultAttr::Use);
         println!("{:?}", avm);
 
         assert_eq!(
@@ -187,12 +210,28 @@ mod tests {
             created_at: Some(format!("d")),
         };
 
-        let avm = p1.entity_to_av_map();
+        let avm = p1.entity_to_av_map(&DefaultAttr::Use);
         println!("{:?}", avm);
 
         assert_eq!(avm.get("predictionid").unwrap().as_s().unwrap(), "a");
         assert_eq!(avm.get("userid").unwrap().as_s().unwrap(), "b");
         assert_eq!(avm.get("condition").unwrap().as_s().unwrap(), "c");
         assert_eq!(avm.get("createdat").unwrap().as_s().unwrap(), "d");
+    }
+
+    #[test]
+    fn av3() {
+        let p1 = Prediction {
+            user_id: Some(format!("b")),
+            condition: Some(format!("c")),
+            created_at: Some(format!("d")),
+            ..Default::default()
+        };
+
+        let avm = p1.entity_to_av_map(&DefaultAttr::Use);
+        println!("=================");
+        println!("{:?}", avm);
+
+        assert_eq!(1, 1);
     }
 }
