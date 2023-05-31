@@ -1,4 +1,4 @@
-use aws_sdk_dynamodb::types::AttributeValue;
+// use aws_sdk_dynamodb::types::AttributeValue;
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
 use lib::dynamo::DdbEntity;
 use lib::entity::prediction::Prediction;
@@ -18,10 +18,9 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let c = ddb().await;
 
     Prediction {
-        prediction_id: format!("a"),
-        user_id: format!("b"),
-        condition: Some(format!("c")),
-        created_at: Some(format!("d")),
+        user_id: Some(format!("AAA")),
+        condition: Some(format!("BBB")),
+        ..Default::default()
     }
     .put(&c)
     .send()

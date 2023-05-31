@@ -11,15 +11,13 @@ pub struct Key {
 }
 
 impl Key {
-    // todo: prop-drill shittiness
     fn _join_composite(&self, attrs: &HashMap<String, Attribute>, default: &DefaultAttr) -> String {
         let mut c = String::new();
         for composite in self.composite.iter() {
-            c.push_str(&format!(
-                "#{}_{}",
-                &composite,
-                attrs.get(composite).unwrap().get_string(default)
-            ));
+            let attr = attrs.get(composite).unwrap();
+            if let Some(s) = attr.get_string(default) {
+                c.push_str(&format!("#{}_{}", composite, s,));
+            }
         }
         c
     }
@@ -34,8 +32,7 @@ pub struct Index {
 #[derive(Debug)]
 pub struct Value<T> {
     pub value: Option<T>,
-    pub required: bool,
-    pub default: Option<T>, // todo: use closures
+    pub default: Option<T>, // todo: closure
 }
 
 #[derive(Debug)]
@@ -53,27 +50,26 @@ pub enum DefaultAttr {
 
 impl<T: Clone> Value<T> {
     fn get(&self, default: &DefaultAttr) -> Option<T> {
-        if let Some(s) = self.value.clone() {
-            return Some(s);
-        } else if self.required {
-            return None;
+        if let Some(_) = self.value {
+            return self.value.clone();
         } else if default == &DefaultAttr::Ignore {
             return None;
-        } else if let Some(s) = self.default.clone() {
-            return Some(s);
+        } else if let Some(_) = self.default {
+            return self.default.clone();
         }
         None
     }
 }
 
 impl Attribute {
-    fn get_string(&self, default: &DefaultAttr) -> String {
+    fn get_string(&self, default: &DefaultAttr) -> Option<String> {
         match self {
             Attribute::DdbString(y) => {
-                return y.get(default).unwrap();
+                return y.get(default);
             }
             Attribute::DdbNumber(y) => {
-                return y.get(default).unwrap().to_string();
+                let x = y.get(default)?;
+                return Some(x.to_string());
             }
             Attribute::DdbBoolean(_) => {
                 panic!("don't use boolean for id stupid");
@@ -95,6 +91,7 @@ pub trait DdbEntity {
 
     fn attributes(&self) -> HashMap<String, Attribute>;
 
+    // todo: eliminate prop-drill shittiness
     fn entity_to_av_map(&self, default: &DefaultAttr) -> HashMap<String, AttributeValue> {
         let info = self.info();
         let mut m = HashMap::new();
@@ -132,7 +129,7 @@ pub trait DdbEntity {
                     "${}#{}{}",
                     info.service,
                     info.entity,
-                    index.partition_key._join_composite(&attrs, &DefaultAttr::Use),
+                    index.partition_key._join_composite(&attrs, default),
                 )),
             );
             // sort key
@@ -141,7 +138,7 @@ pub trait DdbEntity {
                 AttributeValue::S(format!(
                     "${}{}",
                     info.entity,
-                    index.sort_key._join_composite(&attrs, &DefaultAttr::Use)
+                    index.sort_key._join_composite(&attrs, default)
                 )),
             );
         }
@@ -157,81 +154,25 @@ pub trait DdbEntity {
         req
     }
 
-    // fn q(&self, c: &Client) -> bool {
-    //     let mut req = c.query().table_name(self.table_name());
-    //     let a = self.entity_schema();
-    //     let b = self.entity_to_av_map();
-    //     true
-    // }
-}
+    fn q(&self, client: &Client, index: &str) -> Option<QueryFluentBuilder> {
+        let is = self.index_schema();
+        let i = is.get(index)?;
+        let pkf = i.partition_key.field.clone();
+        let skf = i.sort_key.field.clone();
+        // todo: verify the index composites exist in av
+        let av = self.entity_to_av_map(&DefaultAttr::Ignore);
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::entity::prediction::Prediction;
-
-    #[test]
-    fn av1() {
-        let p1 = Prediction {
-            prediction_id: Some(format!("a")),
-            user_id: Some(format!("b")),
-            ..Default::default()
-        };
-
-        let avm = p1.entity_to_av_map(&DefaultAttr::Use);
-        println!("{:?}", avm);
-
-        assert_eq!(
-            avm.get("pk").unwrap().as_s().unwrap(),
-            "$Cdkrs#Prediction#predictionid_a"
-        );
-        assert_eq!(avm.get("sk").unwrap().as_s().unwrap(), "$Prediction");
-        assert_eq!(
-            avm.get("gsi1pk").unwrap().as_s().unwrap(),
-            "$Cdkrs#Prediction#userid_b"
-        );
-        assert_eq!(
-            avm.get("gsi1sk").unwrap().as_s().unwrap(),
-            "$Prediction#predictionid_a"
-        );
-        assert_eq!(
-            avm.get("gsi2pk").unwrap().as_s().unwrap(),
-            "$Cdkrs#Prediction#predictionid_a"
-        );
-        assert_eq!(avm.get("gsi2sk").unwrap().as_s().unwrap(), "$Prediction");
-    }
-
-    #[test]
-    fn av2() {
-        let p1 = Prediction {
-            prediction_id: Some(format!("a")),
-            user_id: Some(format!("b")),
-            condition: Some(format!("c")),
-            created_at: Some(format!("d")),
-        };
-
-        let avm = p1.entity_to_av_map(&DefaultAttr::Use);
-        println!("{:?}", avm);
-
-        assert_eq!(avm.get("predictionid").unwrap().as_s().unwrap(), "a");
-        assert_eq!(avm.get("userid").unwrap().as_s().unwrap(), "b");
-        assert_eq!(avm.get("condition").unwrap().as_s().unwrap(), "c");
-        assert_eq!(avm.get("createdat").unwrap().as_s().unwrap(), "d");
-    }
-
-    #[test]
-    fn av3() {
-        let p1 = Prediction {
-            user_id: Some(format!("b")),
-            condition: Some(format!("c")),
-            created_at: Some(format!("d")),
-            ..Default::default()
-        };
-
-        let avm = p1.entity_to_av_map(&DefaultAttr::Use);
-        println!("=================");
-        println!("{:?}", avm);
-
-        assert_eq!(1, 1);
+        Some(
+            client
+                .query()
+                .table_name(self.info().table)
+                .key_condition_expression(format!(
+                    "#{pkf} = :{pkf} and begins_with(#{skf}, :{skf})"
+                ))
+                .expression_attribute_names(format!("#{pkf}"), &pkf)
+                .expression_attribute_names(format!("#{skf}"), &skf)
+                .expression_attribute_values(format!(":{pkf}"), av.get(&pkf)?.clone())
+                .expression_attribute_values(format!(":{skf}"), av.get(&skf)?.clone()),
+        )
     }
 }

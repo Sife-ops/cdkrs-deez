@@ -1,4 +1,5 @@
 use crate::dynamo::{Attribute, DdbEntity, EntityInfo, Index, Key, Value};
+use chrono::Utc;
 use maplit::hashmap;
 use std::collections::HashMap;
 use std::env;
@@ -67,23 +68,19 @@ impl DdbEntity for Prediction {
         hashmap! {
             format!("predictionid") => Attribute::DdbString(Value {
                 value: self.prediction_id.clone(),
-                required: true,
-                default: Some(Uuid::new_v4().to_string()), // todo: don't generate default during query...
+                default: Some(Uuid::new_v4().to_string()),
             }),
             format!("userid") => Attribute::DdbString(Value {
                 value: self.user_id.clone(),
-                required: true,
                 default: None,
             }),
             format!("condition") => Attribute::DdbString(Value {
                 value: self.condition.clone(),
-                required: false,
                 default: None,
             }),
             format!("createdat") => Attribute::DdbString(Value {
                 value: self.created_at.clone(),
-                required: false,
-                default: None, // todo: rfc3339
+                default: Some(Utc::now().to_rfc3339()),
             }),
         }
     }
