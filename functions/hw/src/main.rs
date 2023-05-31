@@ -31,7 +31,6 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
         ..Default::default()
     }
     .query(&c, "primary")
-    .unwrap()
     .send()
     .await?;
 

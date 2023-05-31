@@ -154,26 +154,22 @@ pub trait DdbEntity {
         req
     }
 
-    fn query(&self, client: &Client, index: &str) -> Option<QueryFluentBuilder> {
+    fn query(&self, client: &Client, index: &str) -> QueryFluentBuilder {
         let is = self.index_schema();
-        let i = is.get(index)?;
+        let i = is.get(index).unwrap();
         let pkf = i.partition_key.field.clone();
         let skf = i.sort_key.field.clone();
         // todo: verify the index composites exist in av
         let av = self.to_map(&DefaultAttr::Ignore);
 
-        Some(
-            client
-                .query()
-                .table_name(self.info().table)
-                .key_condition_expression(format!(
-                    "#{pkf} = :{pkf} and begins_with(#{skf}, :{skf})"
-                ))
-                .expression_attribute_names(format!("#{pkf}"), &pkf)
-                .expression_attribute_names(format!("#{skf}"), &skf)
-                .expression_attribute_values(format!(":{pkf}"), av.get(&pkf)?.clone())
-                .expression_attribute_values(format!(":{skf}"), av.get(&skf)?.clone()),
-        )
+        client
+            .query()
+            .table_name(self.info().table)
+            .key_condition_expression(format!("#{pkf} = :{pkf} and begins_with(#{skf}, :{skf})"))
+            .expression_attribute_names(format!("#{pkf}"), &pkf)
+            .expression_attribute_names(format!("#{skf}"), &skf)
+            .expression_attribute_values(format!(":{pkf}"), av.get(&pkf).unwrap().clone())
+            .expression_attribute_values(format!(":{skf}"), av.get(&skf).unwrap().clone())
     }
 
     fn from_map(m: &HashMap<String, AttributeValue>) -> Self;
