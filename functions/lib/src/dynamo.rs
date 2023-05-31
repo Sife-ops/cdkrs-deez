@@ -11,7 +11,7 @@ pub struct Key {
 }
 
 impl Key {
-    fn _join_composite(&self, attrs: &HashMap<String, Attribute>, default: &DefaultAttr) -> String {
+    fn join_composite(&self, attrs: &HashMap<String, Attribute>, default: &DefaultAttr) -> String {
         let mut c = String::new();
         for composite in self.composite.iter() {
             let attr = attrs.get(composite).unwrap();
@@ -50,11 +50,10 @@ pub enum DefaultAttr {
 
 impl<T: Clone> Value<T> {
     fn get(&self, default: &DefaultAttr) -> Option<T> {
-        if let Some(_) = self.value {
+        if self.value.is_some() {
             return self.value.clone();
-        } else if default == &DefaultAttr::Ignore {
-            return None;
-        } else if let Some(_) = self.default {
+        }
+        if self.default.is_some() && default == &DefaultAttr::Use {
             return self.default.clone();
         }
         None
@@ -129,7 +128,7 @@ pub trait DdbEntity {
                     "${}#{}{}",
                     info.service,
                     info.entity,
-                    index.partition_key._join_composite(&attrs, default),
+                    index.partition_key.join_composite(&attrs, default),
                 )),
             );
             // sort key
@@ -138,7 +137,7 @@ pub trait DdbEntity {
                 AttributeValue::S(format!(
                     "${}{}",
                     info.entity,
-                    index.sort_key._join_composite(&attrs, default)
+                    index.sort_key.join_composite(&attrs, default)
                 )),
             );
         }
@@ -174,12 +173,12 @@ pub trait DdbEntity {
 
     fn from_map(m: &HashMap<String, AttributeValue>) -> Self;
 
-    fn from_map_list(ml: &[HashMap<String, AttributeValue>]) -> Vec<Self>
+    fn from_map_slice(ms: &[HashMap<String, AttributeValue>]) -> Vec<Self>
     where
         Self: Sized,
     {
         let mut v = Vec::new();
-        for a in ml {
+        for a in ms {
             v.push(Self::from_map(a))
         }
         v

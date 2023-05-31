@@ -17,14 +17,14 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 
     let c = ddb().await;
 
-    // Prediction {
-    //     user_id: Some(format!("AAA")),
-    //     condition: Some(format!("BBB")),
-    //     ..Default::default()
-    // }
-    // .put(&c)
-    // .send()
-    // .await?;
+    Prediction {
+        user_id: Some(format!("AAA")),
+        condition: Some(format!("BBB")),
+        ..Default::default()
+    }
+    .put(&c)
+    .send()
+    .await?;
 
     let res = Prediction {
         prediction_id: Some(format!("41e3cdcb-1556-4a3c-a007-19ceb552b188")),
@@ -34,7 +34,7 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     .send()
     .await?;
 
-    let p = Prediction::from_map_list(res.items().unwrap());
+    let _p = Prediction::from_map_slice(res.items().unwrap());
 
     let message = format!("Hello {who}, this is an AWS Lambda HTTP request.");
 
