@@ -1,4 +1,5 @@
 use crate::dynamo::{Attribute, DdbEntity, EntityInfo, Index, Key, Value};
+use aws_sdk_dynamodb::types::AttributeValue;
 use chrono::Utc;
 use maplit::hashmap;
 use std::collections::HashMap;
@@ -83,5 +84,21 @@ impl DdbEntity for Prediction {
                 default: Some(Utc::now().to_rfc3339()),
             }),
         }
+    }
+
+    fn from_map(m: &HashMap<String, AttributeValue>) -> Self {
+        let mut d = Prediction {
+            ..Default::default()
+        };
+        for (k, v) in m {
+            match k.as_str() {
+                "predictionid" => d.prediction_id = Some(v.as_s().unwrap().clone()),
+                "userid" => d.user_id = Some(v.as_s().unwrap().clone()),
+                "condition" => d.condition = Some(v.as_s().unwrap().clone()),
+                "createdat" => d.created_at = Some(v.as_s().unwrap().clone()),
+                &_ => {}
+            }
+        }
+        d
     }
 }

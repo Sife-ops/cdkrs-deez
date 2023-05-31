@@ -17,24 +17,25 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 
     let c = ddb().await;
 
-    Prediction {
-        user_id: Some(format!("AAA")),
-        condition: Some(format!("BBB")),
+    // Prediction {
+    //     user_id: Some(format!("AAA")),
+    //     condition: Some(format!("BBB")),
+    //     ..Default::default()
+    // }
+    // .put(&c)
+    // .send()
+    // .await?;
+
+    let res = Prediction {
+        prediction_id: Some(format!("41e3cdcb-1556-4a3c-a007-19ceb552b188")),
         ..Default::default()
     }
-    .put(&c)
+    .query(&c, "primary")
+    .unwrap()
     .send()
     .await?;
 
-    // let es = p.entity_schema().table;
-
-    // let req = c
-    //     .put_item()
-    //     .table_name("cdkrs-table")
-    //     .item("pk", AttributeValue::S("lol".to_string()))
-    //     .item("sk", AttributeValue::S("ok".to_string()));
-    // let res = req.send().await?;
-    // println!("res {:?}", res);
+    let p = Prediction::from_map_list(res.items().unwrap());
 
     let message = format!("Hello {who}, this is an AWS Lambda HTTP request.");
 

@@ -92,7 +92,7 @@ pub trait DdbEntity {
     fn attributes(&self) -> HashMap<String, Attribute>;
 
     // todo: eliminate prop-drill shittiness
-    fn entity_to_av_map(&self, default: &DefaultAttr) -> HashMap<String, AttributeValue> {
+    fn to_map(&self, default: &DefaultAttr) -> HashMap<String, AttributeValue> {
         let info = self.info();
         let mut m = HashMap::new();
         m.insert(format!("_entity"), AttributeValue::S(info.entity.clone()));
@@ -147,20 +147,20 @@ pub trait DdbEntity {
 
     fn put(&self, c: &Client) -> PutItemFluentBuilder {
         let mut req = c.put_item().table_name(self.info().table);
-        let m = self.entity_to_av_map(&DefaultAttr::Use);
+        let m = self.to_map(&DefaultAttr::Use);
         for (k, v) in &m {
             req = req.item(k, v.clone());
         }
         req
     }
 
-    fn q(&self, client: &Client, index: &str) -> Option<QueryFluentBuilder> {
+    fn query(&self, client: &Client, index: &str) -> Option<QueryFluentBuilder> {
         let is = self.index_schema();
         let i = is.get(index)?;
         let pkf = i.partition_key.field.clone();
         let skf = i.sort_key.field.clone();
         // todo: verify the index composites exist in av
-        let av = self.entity_to_av_map(&DefaultAttr::Ignore);
+        let av = self.to_map(&DefaultAttr::Ignore);
 
         Some(
             client
@@ -174,5 +174,18 @@ pub trait DdbEntity {
                 .expression_attribute_values(format!(":{pkf}"), av.get(&pkf)?.clone())
                 .expression_attribute_values(format!(":{skf}"), av.get(&skf)?.clone()),
         )
+    }
+
+    fn from_map(m: &HashMap<String, AttributeValue>) -> Self;
+
+    fn from_map_list(ml: &[HashMap<String, AttributeValue>]) -> Vec<Self>
+    where
+        Self: Sized,
+    {
+        let mut v = Vec::new();
+        for a in ml {
+            v.push(Self::from_map(a))
+        }
+        v
     }
 }

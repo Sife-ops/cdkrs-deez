@@ -80,6 +80,21 @@ mod dynamo_test {
                 }),
             }
         }
+
+        fn from_map(m: &HashMap<String, AttributeValue>) -> Self {
+            let mut d = TestStruct {
+                ..Default::default()
+            };
+            for (k, v) in m {
+                match k.as_str() {
+                    "primaryid" => d.primary_id = Some(v.as_s().unwrap().clone()), // todo: clone or to_string
+                    "foreignid" => d.foreign_id = Some(v.as_s().unwrap().clone()),
+                    "createdat" => d.created_at = Some(v.as_s().unwrap().clone()),
+                    &_ => {},
+                }
+            }
+            d
+        }
     }
 
     fn deez(a: &HashMap<String, AttributeValue>, b: &str) -> String {
@@ -100,7 +115,7 @@ mod dynamo_test {
             foreign_id: Some(fid.clone()),
             ..Default::default()
         };
-        let avm = a.entity_to_av_map(&DefaultAttr::Use);
+        let avm = a.to_map(&DefaultAttr::Use);
         let pid = Uuid::parse_str(&deez(&avm, "primaryid"))
             .unwrap()
             .to_string();
@@ -132,7 +147,7 @@ mod dynamo_test {
         let a = TestStruct {
             ..Default::default()
         };
-        let avm = a.entity_to_av_map(&DefaultAttr::Ignore);
+        let avm = a.to_map(&DefaultAttr::Ignore);
 
         sugon(&avm);
 
@@ -150,7 +165,7 @@ mod dynamo_test {
             primary_id: Some(format!("AAA")),
             ..Default::default()
         };
-        let avm = a.entity_to_av_map(&DefaultAttr::Ignore);
+        let avm = a.to_map(&DefaultAttr::Ignore);
         sugon(&avm);
     }
 }
