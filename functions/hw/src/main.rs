@@ -1,6 +1,7 @@
 // use aws_sdk_dynamodb::types::AttributeValue;
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
 use lib::dynamo::DdbEntity;
+use lib::dynamo::Deez;
 use lib::entity::prediction::Prediction;
 use lib::service::ddb;
 
@@ -15,26 +16,25 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
         .and_then(|params| params.first("name"))
         .unwrap_or("world");
 
-    let c = ddb().await;
-
-    Prediction {
-        user_id: Some(format!("someusername")),
-        condition: Some(format!("something will happen")),
-        ..Default::default()
-    }
-    .put(&c)
+    let d = Deez::new(ddb().await);
+    d.put(Prediction {
+        user_id: Some(format!("deez")),
+        ..Prediction::generated_values()
+    })
     .send()
     .await?;
 
-    let res = Prediction {
-        prediction_id: Some(format!("41e3cdcb-1556-4a3c-a007-19ceb552b188")),
-        ..Default::default()
-    }
-    .query(&c, "primary")
-    .send()
-    .await?;
-
-    let _p = Prediction::from_map_slice(res.items().unwrap());
+    let q = d
+        .query(
+            Prediction {
+                prediction_id: Some(format!("41e3cdcb-1556-4a3c-a007-19ceb552b188")),
+                ..Default::default()
+            },
+            "primary",
+        )
+        .send()
+        .await?;
+    let _p = Prediction::from_map_slice(q.items().unwrap());
 
     let message = format!("Hello {who}, this is an AWS Lambda HTTP request.");
 

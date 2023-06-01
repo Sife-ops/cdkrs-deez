@@ -140,33 +140,6 @@ pub trait DdbEntity {
         m
     }
 
-    fn put(&self, c: &Client) -> PutItemFluentBuilder {
-        let mut req = c.put_item().table_name(self.info().table);
-        let m = self.to_map();
-        for (k, v) in &m {
-            req = req.item(k, v.clone());
-        }
-        req
-    }
-
-    fn query(&self, client: &Client, index: &str) -> QueryFluentBuilder {
-        let is = self.index_schema();
-        let i = is.get(index).unwrap();
-        let pkf = i.partition_key.field.clone();
-        let skf = i.sort_key.field.clone();
-        // todo: verify the index composites exist in av
-        let av = self.to_map();
-
-        client
-            .query()
-            .table_name(self.info().table)
-            .key_condition_expression(format!("#{pkf} = :{pkf} and begins_with(#{skf}, :{skf})"))
-            .expression_attribute_names(format!("#{pkf}"), &pkf)
-            .expression_attribute_names(format!("#{skf}"), &skf)
-            .expression_attribute_values(format!(":{pkf}"), av.get(&pkf).unwrap().clone())
-            .expression_attribute_values(format!(":{skf}"), av.get(&skf).unwrap().clone())
-    }
-
     fn from_map(m: &HashMap<String, AttributeValue>) -> Self;
 
     fn from_map_slice(ms: &[HashMap<String, AttributeValue>]) -> Vec<Self>
@@ -178,5 +151,42 @@ pub trait DdbEntity {
             v.push(Self::from_map(a))
         }
         v
+    }
+}
+
+pub struct Deez {
+    client: Client,
+}
+
+impl Deez {
+    pub fn new(c: Client) -> Self {
+        Self { client: c }
+    }
+
+    pub fn put(&self, e: impl DdbEntity) -> PutItemFluentBuilder {
+        let mut req = self.client.put_item().table_name(e.info().table);
+        let m = e.to_map();
+        for (k, v) in &m {
+            req = req.item(k, v.clone());
+        }
+        req
+    }
+
+    pub fn query(&self, e: impl DdbEntity, index: &str) -> QueryFluentBuilder {
+        let is = e.index_schema();
+        let i = is.get(index).unwrap();
+        let pkf = i.partition_key.field.clone();
+        let skf = i.sort_key.field.clone();
+        // todo: verify the index composites exist in av
+        let av = e.to_map();
+
+        self.client
+            .query()
+            .table_name(e.info().table)
+            .key_condition_expression(format!("#{pkf} = :{pkf} and begins_with(#{skf}, :{skf})"))
+            .expression_attribute_names(format!("#{pkf}"), &pkf)
+            .expression_attribute_names(format!("#{skf}"), &skf)
+            .expression_attribute_values(format!(":{pkf}"), av.get(&pkf).unwrap().clone())
+            .expression_attribute_values(format!(":{skf}"), av.get(&skf).unwrap().clone())
     }
 }
