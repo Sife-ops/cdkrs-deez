@@ -1,4 +1,4 @@
-use crate::dynamo::{Attribute, DdbEntity, EntityInfo, Index, Key, Value};
+use crate::dynamo::{Attribute, DdbEntity, EntityInfo, Index, Key};
 use aws_sdk_dynamodb::types::AttributeValue;
 use chrono::Utc;
 use maplit::hashmap;
@@ -67,22 +67,18 @@ impl DdbEntity for Prediction {
 
     fn attributes(&self) -> HashMap<String, Attribute> {
         hashmap! {
-            format!("predictionid") => Attribute::DdbString(Value {
-                value: self.prediction_id.clone(),
-                default: Some(Uuid::new_v4().to_string()),
-            }),
-            format!("userid") => Attribute::DdbString(Value {
-                value: self.user_id.clone(),
-                default: None,
-            }),
-            format!("condition") => Attribute::DdbString(Value {
-                value: self.condition.clone(),
-                default: None,
-            }),
-            format!("createdat") => Attribute::DdbString(Value {
-                value: self.created_at.clone(),
-                default: Some(Utc::now().to_rfc3339()),
-            }),
+            format!("predictionid") => Attribute::DdbString(self.prediction_id.clone()),
+            format!("userid") => Attribute::DdbString(self.user_id.clone()),
+            format!("condition") => Attribute::DdbString(self.condition.clone()),
+            format!("createdat") => Attribute::DdbString(self.created_at.clone()),
+        }
+    }
+
+    fn generated_values() -> Self {
+        Prediction {
+            prediction_id: Some(Uuid::new_v4().to_string()),
+            created_at: Some(Utc::now().to_rfc3339()),
+            ..Default::default()
         }
     }
 

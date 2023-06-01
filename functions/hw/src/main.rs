@@ -18,8 +18,8 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let c = ddb().await;
 
     Prediction {
-        user_id: Some(format!("AAA")),
-        condition: Some(format!("BBB")),
+        user_id: Some(format!("someusername")),
+        condition: Some(format!("something will happen")),
         ..Default::default()
     }
     .put(&c)

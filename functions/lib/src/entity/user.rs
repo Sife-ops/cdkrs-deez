@@ -1,4 +1,4 @@
-use crate::dynamo::{Attribute, DdbEntity, EntityInfo, Index, Key, Value};
+use crate::dynamo::{Attribute, DdbEntity, EntityInfo, Index, Key};
 use aws_sdk_dynamodb::types::AttributeValue;
 use maplit::hashmap;
 use std::collections::HashMap;
@@ -55,30 +55,18 @@ impl DdbEntity for User {
 
     fn attributes(&self) -> HashMap<String, Attribute> {
         hashmap! {
-            format!("userid") => Attribute::DdbString(Value {
-                value: self.user_id.clone(),
-                default: None,
-            }),
-            format!("username") => Attribute::DdbString(Value {
-                value: self.username.clone(),
-                default: None,
-            }),
-            format!("discriminator") => Attribute::DdbString(Value {
-                value: self.discriminator.clone(),
-                default: None,
-            }),
-            format!("displayname") => Attribute::DdbString(Value {
-                value: self.display_name.clone(),
-                default: None,
-            }),
-            format!("globalname") => Attribute::DdbString(Value {
-                value: self.global_name.clone(),
-                default: None,
-            }),
-            format!("avatar") => Attribute::DdbString(Value {
-                value: self.avatar.clone(),
-                default: None,
-            }),
+            format!("userid") => Attribute::DdbString(self.user_id.clone()),
+            format!("username") => Attribute::DdbString(self.username.clone()),
+            format!("discriminator") => Attribute::DdbString(self.discriminator.clone()),
+            format!("displayname") => Attribute::DdbString(self.display_name.clone()),
+            format!("globalname") => Attribute::DdbString(self.global_name.clone()),
+            format!("avatar") => Attribute::DdbString(self.avatar.clone()),
+        }
+    }
+
+    fn generated_values() -> Self {
+        User {
+            ..Default::default()
         }
     }
 

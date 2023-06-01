@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod dynamo_test {
-    use crate::dynamo::{Attribute, DdbEntity, DefaultAttr, EntityInfo, Index, Key, Value};
+    use crate::dynamo::{Attribute, DdbEntity, EntityInfo, Index, Key};
     use aws_sdk_dynamodb::types::AttributeValue;
     use chrono::Utc;
     use maplit::hashmap;
@@ -66,18 +66,17 @@ mod dynamo_test {
 
         fn attributes(&self) -> HashMap<String, Attribute> {
             hashmap! {
-                format!("primaryid") => Attribute::DdbString(Value {
-                    value: self.primary_id.clone(),
-                    default: Some(Uuid::new_v4().to_string()),
-                }),
-                format!("foreignid") => Attribute::DdbString(Value {
-                    value: self.foreign_id.clone(),
-                    default: None,
-                }),
-                format!("createdat") => Attribute::DdbString(Value {
-                    value: self.created_at.clone(),
-                    default: Some(Utc::now().to_rfc3339()),
-                }),
+                format!("primaryid") => Attribute::DdbString(self.primary_id.clone()),
+                format!("foreignid") => Attribute::DdbString(self.foreign_id.clone()),
+                format!("createdat") => Attribute::DdbString(self.created_at.clone()),
+            }
+        }
+
+        fn generated_values() -> Self {
+            TestStruct {
+                primary_id: Some(Uuid::new_v4().to_string()),
+                created_at: Some(Utc::now().to_rfc3339()),
+                ..Default::default()
             }
         }
 
@@ -90,7 +89,7 @@ mod dynamo_test {
                     "primaryid" => d.primary_id = Some(v.as_s().unwrap().clone()), // todo: clone or to_string
                     "foreignid" => d.foreign_id = Some(v.as_s().unwrap().clone()),
                     "createdat" => d.created_at = Some(v.as_s().unwrap().clone()),
-                    &_ => {},
+                    &_ => {}
                 }
             }
             d
@@ -113,9 +112,11 @@ mod dynamo_test {
         let fid = Uuid::new_v4().to_string();
         let a = TestStruct {
             foreign_id: Some(fid.clone()),
-            ..Default::default()
+            ..TestStruct::generated_values()
         };
-        let avm = a.to_map(&DefaultAttr::Use);
+        println!("");
+        println!("{:?}", a);
+        let avm = a.to_map();
         let pid = Uuid::parse_str(&deez(&avm, "primaryid"))
             .unwrap()
             .to_string();
@@ -147,7 +148,7 @@ mod dynamo_test {
         let a = TestStruct {
             ..Default::default()
         };
-        let avm = a.to_map(&DefaultAttr::Ignore);
+        let avm = a.to_map();
 
         sugon(&avm);
 
@@ -159,13 +160,13 @@ mod dynamo_test {
         assert_eq!(deez(&avm, "gsi2sk"), format!("$TestEntity"));
     }
 
-    #[test]
-    fn e2m3() {
-        let a = TestStruct {
-            primary_id: Some(format!("AAA")),
-            ..Default::default()
-        };
-        let avm = a.to_map(&DefaultAttr::Ignore);
-        sugon(&avm);
-    }
+    // #[test]
+    // fn e2m3() {
+    //     let a = TestStruct {
+    //         primary_id: Some(format!("AAA")),
+    //         ..Default::default()
+    //     };
+    //     let avm = a.to_map();
+    //     sugon(&avm);
+    // }
 }

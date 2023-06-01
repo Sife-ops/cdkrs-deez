@@ -4,23 +4,10 @@ use aws_sdk_dynamodb::types::AttributeValue;
 use aws_sdk_dynamodb::Client;
 use std::collections::HashMap;
 
-#[derive(Debug)]
-pub struct Key {
-    pub field: String,
-    pub composite: Vec<String>,
-}
-
-impl Key {
-    fn join_composite(&self, attrs: &HashMap<String, Attribute>, default: &DefaultAttr) -> String {
-        let mut c = String::new();
-        for composite in self.composite.iter() {
-            let attr = attrs.get(composite).unwrap();
-            if let Some(s) = attr.get_string(default) {
-                c.push_str(&format!("#{}_{}", composite, s,));
-            }
-        }
-        c
-    }
+pub struct EntityInfo {
+    pub table: String,
+    pub service: String,
+    pub entity: String,
 }
 
 #[derive(Debug)]
@@ -30,57 +17,45 @@ pub struct Index {
 }
 
 #[derive(Debug)]
-pub struct Value<T> {
-    pub value: Option<T>,
-    pub default: Option<T>, // todo: closure
+pub struct Key {
+    pub field: String,
+    pub composite: Vec<String>,
 }
 
-#[derive(Debug)]
-pub enum Attribute {
-    DdbString(Value<String>),
-    DdbNumber(Value<i64>),
-    DdbBoolean(Value<bool>),
-}
-
-#[derive(PartialEq)]
-pub enum DefaultAttr {
-    Use,
-    Ignore,
-}
-
-impl<T: Clone> Value<T> {
-    fn get(&self, default: &DefaultAttr) -> Option<T> {
-        if self.value.is_some() {
-            return self.value.clone();
+impl Key {
+    fn join_composite(&self, attrs: &HashMap<String, Attribute>) -> String {
+        let mut c = String::new();
+        for composite in self.composite.iter() {
+            let attr = attrs.get(composite).unwrap();
+            if let Some(s) = attr.string_or_none() {
+                c.push_str(&format!("#{}_{}", composite, s,));
+            }
         }
-        if self.default.is_some() && default == &DefaultAttr::Use {
-            return self.default.clone();
-        }
-        None
+        c
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum Attribute {
+    DdbString(Option<String>),
+    DdbNumber(Option<i64>),
+    DdbBoolean(Option<bool>),
 }
 
 impl Attribute {
-    fn get_string(&self, default: &DefaultAttr) -> Option<String> {
+    fn string_or_none(&self) -> Option<String> {
         match self {
-            Attribute::DdbString(y) => {
-                return y.get(default);
-            }
-            Attribute::DdbNumber(y) => {
-                let x = y.get(default)?;
-                return Some(x.to_string());
-            }
-            Attribute::DdbBoolean(_) => {
-                panic!("don't use boolean for id stupid");
-            }
+            Attribute::DdbString(y) => y.clone(),
+            Attribute::DdbNumber(y) => Some(y.clone()?.to_string()),
+            Attribute::DdbBoolean(y) => Some(y.clone()?.to_string()),
         }
     }
 }
 
-pub struct EntityInfo {
-    pub table: String,
-    pub service: String,
-    pub entity: String,
+#[derive(PartialEq)]
+pub enum GeneratedValues {
+    Use,
+    Ignore,
 }
 
 pub trait DdbEntity {
@@ -90,28 +65,48 @@ pub trait DdbEntity {
 
     fn attributes(&self) -> HashMap<String, Attribute>;
 
-    // todo: eliminate prop-drill shittiness
-    fn to_map(&self, default: &DefaultAttr) -> HashMap<String, AttributeValue> {
-        let info = self.info();
+    fn generated_values() -> Self;
+
+    // fn to_map(&self, default: &GeneratedValues) -> HashMap<String, AttributeValue>
+    fn to_map(&self) -> HashMap<String, AttributeValue> {
         let mut m = HashMap::new();
-        m.insert(format!("_entity"), AttributeValue::S(info.entity.clone()));
+        m.insert(
+            format!("_entity"),
+            AttributeValue::S(self.info().entity.clone()),
+        );
 
         // attributes
-        let attrs = self.attributes();
-        for (name, attr) in &attrs {
+        let attrs = &self.attributes();
+
+        // crap
+        // if default == &GeneratedValues::Use {
+        //     let def_attrs = &Self::generated_values().attributes();
+        //     for (k, v) in attrs.clone() {
+        //         if v.string_or_none().is_none() {
+        //             let def_attr = def_attrs.get(&k).unwrap();
+        //             if def_attr.string_or_none().is_some() {
+        //                 attrs
+        //                     .entry(k.to_string())
+        //                     .and_modify(|e| *e = def_attr.clone());
+        //             }
+        //         }
+        //     }
+        // }
+
+        for (name, attr) in attrs {
             match attr {
                 Attribute::DdbString(v) => {
-                    if let Some(s) = v.get(default) {
-                        m.insert(name.to_string(), AttributeValue::S(s));
+                    if let Some(s) = v {
+                        m.insert(name.to_string(), AttributeValue::S(s.to_string()));
                     }
                 }
                 Attribute::DdbBoolean(v) => {
-                    if let Some(s) = v.get(default) {
-                        m.insert(name.to_string(), AttributeValue::Bool(s));
+                    if let Some(s) = v {
+                        m.insert(name.to_string(), AttributeValue::Bool(*s));
                     }
                 }
                 Attribute::DdbNumber(v) => {
-                    if let Some(s) = v.get(default) {
+                    if let Some(s) = v {
                         m.insert(name.to_string(), AttributeValue::N(s.to_string()));
                     }
                 }
@@ -126,9 +121,9 @@ pub trait DdbEntity {
                 index.partition_key.field.clone(),
                 AttributeValue::S(format!(
                     "${}#{}{}",
-                    info.service,
-                    info.entity,
-                    index.partition_key.join_composite(&attrs, default),
+                    self.info().service,
+                    self.info().entity,
+                    index.partition_key.join_composite(attrs),
                 )),
             );
             // sort key
@@ -136,17 +131,18 @@ pub trait DdbEntity {
                 index.sort_key.field.clone(),
                 AttributeValue::S(format!(
                     "${}{}",
-                    info.entity,
-                    index.sort_key.join_composite(&attrs, default)
+                    self.info().entity,
+                    index.sort_key.join_composite(attrs)
                 )),
             );
         }
+
         m
     }
 
     fn put(&self, c: &Client) -> PutItemFluentBuilder {
         let mut req = c.put_item().table_name(self.info().table);
-        let m = self.to_map(&DefaultAttr::Use);
+        let m = self.to_map();
         for (k, v) in &m {
             req = req.item(k, v.clone());
         }
@@ -159,7 +155,7 @@ pub trait DdbEntity {
         let pkf = i.partition_key.field.clone();
         let skf = i.sort_key.field.clone();
         // todo: verify the index composites exist in av
-        let av = self.to_map(&DefaultAttr::Ignore);
+        let av = self.to_map();
 
         client
             .query()
