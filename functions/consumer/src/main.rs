@@ -2,8 +2,8 @@ mod commands;
 mod common;
 
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
+use lib::deez::Deez;
 use lib::discord::InteractionBody;
-use lib::dynamo::Deez;
 use lib::onboard::onboard;
 use lib::service::make_dynamo_client;
 use std::env;

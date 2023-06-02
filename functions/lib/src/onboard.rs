@@ -1,4 +1,4 @@
-use crate::dynamo::{DdbEntity, Deez};
+use crate::deez::{DdbEntity, Deez};
 use crate::entity::user::User;
 
 // todo: too much unwrap

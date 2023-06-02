@@ -1,7 +1,7 @@
 pub mod discord;
 
-pub mod dynamo;
-mod dynamo_test;
+pub mod deez;
+mod deez_test;
 
 pub mod entity;
 

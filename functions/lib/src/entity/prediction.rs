@@ -1,4 +1,4 @@
-use crate::dynamo::{Attribute, DdbEntity, EntityInfo, Index, Key};
+use crate::deez::{Attribute, DdbEntity, EntityInfo, Index, Key};
 use aws_sdk_dynamodb::types::AttributeValue;
 use chrono::Utc;
 use maplit::hashmap;

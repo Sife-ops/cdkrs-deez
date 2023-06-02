@@ -1,12 +1,13 @@
 use crate::common::{get_memeber_user_id, get_option_value};
 use lambda_runtime::Error;
+use lib::deez::{DdbEntity, Deez};
 use lib::discord::{Embed, Field, InteractionBody, ResponseData};
-use lib::dynamo::{DdbEntity, Deez};
 use lib::entity::prediction::Prediction;
 
 pub async fn create(d: &Deez, b: &InteractionBody) -> Result<ResponseData, Error> {
     let condition = get_option_value(b, "namce")?.to_string()?;
 
+    // todo: mnemonic prediction_id
     let prediction = Prediction {
         user_id: Some(get_memeber_user_id(b)?.to_string()),
         condition: Some(condition.to_string()),
