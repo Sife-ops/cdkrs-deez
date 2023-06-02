@@ -2,8 +2,8 @@ mod commands;
 
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use lib::discord::InteractionBody;
-use reqwest;
 use std::env;
+use ureq;
 
 async fn function_handler(event: LambdaEvent<InteractionBody>) -> Result<(), Error> {
     // todo: onboard user
@@ -13,18 +13,18 @@ async fn function_handler(event: LambdaEvent<InteractionBody>) -> Result<(), Err
         &_ => panic!("unknown command name"),
     };
 
-    let client = reqwest::Client::new();
-    client
-        .post(format!(
+    let a = ureq::agent();
+    let b = a
+        .post(&format!(
             "https://discord.com/api/v10/webhooks/{}/{}",
             env::var("BOT_APP_ID")?,
             event.payload.token
         ))
-        .body(serde_json::to_string(&res)?)
-        .header("Content-Type", "application/json")
-        .header("Authorization", env::var("BOT_PUBLIC_KEY")?)
-        .send()
-        .await?;
+        .set("Content-Type", "application/json")
+        .set("Authorization", &env::var("BOT_PUBLIC_KEY")?)
+        .send_string(&serde_json::to_string(&res)?)?
+        .into_string()?;
+    println!("{}", b);
 
     Ok(())
 }
