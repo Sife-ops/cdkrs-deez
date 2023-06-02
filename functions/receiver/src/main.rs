@@ -1,5 +1,8 @@
+use aws_sdk_lambda::types::InvocationType;
+use aws_smithy_types::Blob;
 use ed25519_dalek::{PublicKey, Signature, Verifier};
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
+use lib::service::make_lambda_client;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use std::env;
@@ -23,9 +26,9 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
         Body::Text(t) => t,
         _ => panic!(), // return error?
     };
+    let interaction_body: InteractionBody = serde_json::from_str(&body_text)?;
 
     // verification
-    let interaction_body: InteractionBody = serde_json::from_str(&body_text)?;
     if interaction_body.interaction_type == 1 {
         // public key
         let public_key_string = env::var("BOT_PUBLIC_KEY")?;
@@ -59,11 +62,20 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
             Err(_) => Ok(Response::builder()
                 .status(401)
                 .body(Body::Empty)
-                .map_err(Box::new)?
-            ),
+                .map_err(Box::new)?),
         };
     }
 
+    let lc = make_lambda_client().await;
+    let _r = lc
+        .invoke()
+        .function_name(env::var("CONSUMERFN_ARN")?)
+        .invocation_type(InvocationType::Event)
+        .payload(Blob::new(body_text.as_bytes()))
+        .send()
+        .await?;
+
+    // todo: VV deferred response VV
     // Extract some useful information from the request
     let who = event
         .query_string_parameters_ref()

@@ -97,14 +97,26 @@ export class CdkrsStack extends cdk.Stack {
       integration: new HttpLambdaIntegration("hw-integration", hwl),
     });
 
-    const receiverFn = new RustFunction(this, "receiver", {
-      manifestPath: "functions/receiver/Cargo.toml",
+    const consumerFn = new RustFunction(this, "consumer", {
+      manifestPath: "functions/consumer/Cargo.toml",
       environment: {
         TABLE_NAME: table.tableName,
       },
     });
 
+    table.grantFullAccess(consumerFn);
+
+    const receiverFn = new RustFunction(this, "receiver", {
+      manifestPath: "functions/receiver/Cargo.toml",
+      environment: {
+        TABLE_NAME: table.tableName,
+        CONSUMERFN_ARN: consumerFn.functionArn,
+        // CONSUMERFN_NAME: consumerFn.functionName,
+      },
+    });
+
     table.grantFullAccess(receiverFn);
+    consumerFn.grantInvoke(receiverFn);
 
     api.addRoutes({
       path: "/receiver",
