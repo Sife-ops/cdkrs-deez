@@ -163,7 +163,7 @@ impl Deez {
         Self { client: c }
     }
 
-    pub fn put(&self, e: impl DdbEntity) -> PutItemFluentBuilder {
+    pub fn put(&self, e: &impl DdbEntity) -> PutItemFluentBuilder {
         let mut req = self.client.put_item().table_name(e.info().table);
         let m = e.to_map();
         for (k, v) in &m {
@@ -172,7 +172,7 @@ impl Deez {
         req
     }
 
-    pub fn query(&self, e: impl DdbEntity, index: &str) -> QueryFluentBuilder {
+    pub fn query(&self, index: &str, e: &impl DdbEntity) -> QueryFluentBuilder {
         let is = e.index_schema();
         let i = is.get(index).unwrap();
         let pkf = i.partition_key.field.clone();

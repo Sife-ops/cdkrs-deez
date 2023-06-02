@@ -2,11 +2,26 @@ mod commands;
 
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use lib::discord::InteractionBody;
+use lib::dynamo::Deez;
+use lib::onboard::onboard;
+use lib::service::make_dynamo_client;
 use std::env;
 use ureq;
 
 async fn function_handler(event: LambdaEvent<InteractionBody>) -> Result<(), Error> {
-    // todo: onboard user
+    let deez = Deez::new(make_dynamo_client().await);
+    onboard(
+        &deez,
+        event
+            .payload
+            .member
+            .as_ref()
+            .unwrap()
+            .user
+            .as_ref()
+            .unwrap(),
+    )
+    .await;
 
     let res = match event.payload.data.as_ref().unwrap().name.as_str() {
         "foo" => commands::foo::foo(&event.payload).await,

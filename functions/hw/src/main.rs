@@ -17,7 +17,7 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
         .unwrap_or("world");
 
     let d = Deez::new(make_dynamo_client().await);
-    d.put(Prediction {
+    d.put(&Prediction {
         user_id: Some(format!("deez")),
         ..Prediction::generated_values()
     })
@@ -26,11 +26,11 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
 
     let q = d
         .query(
-            Prediction {
+            "primary",
+            &Prediction {
                 prediction_id: Some(format!("41e3cdcb-1556-4a3c-a007-19ceb552b188")),
                 ..Default::default()
             },
-            "primary",
         )
         .send()
         .await?;
