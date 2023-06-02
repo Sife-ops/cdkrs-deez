@@ -1,4 +1,4 @@
-use crate::deez::{Attribute, DdbEntity, EntityInfo, Index, Key};
+use crate::deez::{Attribute, DeezEntity, EntityInfo, Index, Key};
 use aws_sdk_dynamodb::types::AttributeValue;
 use maplit::hashmap;
 use serde::Deserialize;
@@ -17,7 +17,7 @@ pub struct User {
 }
 
 // todo: https://users.rust-lang.org/t/access-struct-attributes-by-string/17520/2
-impl DdbEntity for User {
+impl DeezEntity for User {
     fn info(&self) -> EntityInfo {
         EntityInfo {
             table: env::var("TABLE_NAME").unwrap_or(format!("MISSING")),

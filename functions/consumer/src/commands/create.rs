@@ -1,6 +1,6 @@
 use crate::common::{get_memeber_user_id, get_option_value};
 use lambda_runtime::Error;
-use lib::deez::{DdbEntity, Deez};
+use lib::deez::{DeezEntity, Deez};
 use lib::discord::{Embed, Field, InteractionBody, ResponseData};
 use lib::entity::prediction::Prediction;
 

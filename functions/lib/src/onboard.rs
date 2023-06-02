@@ -1,4 +1,4 @@
-use crate::deez::{DdbEntity, Deez};
+use crate::deez::{DeezEntity, Deez};
 use crate::entity::user::User;
 
 // todo: too much unwrap

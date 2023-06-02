@@ -1,4 +1,4 @@
-use crate::deez::{Attribute, DdbEntity, EntityInfo, Index, Key};
+use crate::deez::{Attribute, DeezEntity, EntityInfo, Index, Key};
 use aws_sdk_dynamodb::types::AttributeValue;
 use chrono::Utc;
 use maplit::hashmap;
@@ -15,7 +15,7 @@ pub struct Prediction {
 }
 
 // todo: https://users.rust-lang.org/t/access-struct-attributes-by-string/17520/2
-impl DdbEntity for Prediction {
+impl DeezEntity for Prediction {
     fn info(&self) -> EntityInfo {
         EntityInfo {
             table: env::var("TABLE_NAME").unwrap_or(format!("MISSING")),

@@ -1,6 +1,6 @@
 // use aws_sdk_dynamodb::types::AttributeValue;
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
-// use lib::dynamo::DdbEntity;
+// use lib::dynamo::DeezEntity;
 // use lib::dynamo::Deez;
 // use lib::entity::prediction::Prediction;
 // use lib::service::make_dynamo_client;

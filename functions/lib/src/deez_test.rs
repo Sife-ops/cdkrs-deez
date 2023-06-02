@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod dynamo_test {
-    use crate::deez::{Attribute, DdbEntity, EntityInfo, Index, Key};
+    use crate::deez::{Attribute, DeezEntity, EntityInfo, Index, Key};
     use aws_sdk_dynamodb::types::AttributeValue;
     use chrono::Utc;
     use maplit::hashmap;
@@ -14,7 +14,7 @@ mod dynamo_test {
         created_at: Option<String>,
     }
 
-    impl DdbEntity for TestStruct {
+    impl DeezEntity for TestStruct {
         fn info(&self) -> EntityInfo {
             EntityInfo {
                 table: format!("test_table"),
