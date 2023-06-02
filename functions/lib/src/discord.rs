@@ -44,24 +44,30 @@ pub enum CommandOptionValue {
     INTEGER(isize),
 }
 
-#[derive(Debug, Clone)]
-pub struct CommandOptionValueError;
-impl std::fmt::Display for CommandOptionValueError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "unexpected value type")
-    }
-}
-impl std::error::Error for CommandOptionValueError {
-    // todo: definitions
-}
+// #[derive(Debug, Clone)]
+// pub struct CommandOptionValueError;
+// impl std::fmt::Display for CommandOptionValueError {
+//     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+//         write!(f, "unexpected value type")
+//     }
+// }
+// impl std::error::Error for CommandOptionValueError {
+//     // todo: definitions
+// }
 
 impl CommandOptionValue {
-    // todo: not a real "to_string" method, change name
-    pub fn to_string(&self) -> Result<&String, CommandOptionValueError> {
-        if let Self::STRING(a) = self {
-            return Ok(a);
+    // // todo: not a real "to_string" method, change name
+    // pub fn to_string(&self) -> Result<&String, CommandOptionValueError> {
+    //     if let Self::STRING(a) = self {
+    //         return Ok(a);
+    //     }
+    //     Err(CommandOptionValueError)
+    // }
+    pub fn string(&self) -> Option<&String> {
+        match self {
+            Self::STRING(s) => Some(s),
+            _ => None,
         }
-        Err(CommandOptionValueError)
     }
 }
 

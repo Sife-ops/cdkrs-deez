@@ -1,11 +1,13 @@
 use crate::common::{get_memeber_user_id, get_option_value};
 use lambda_runtime::Error;
-use lib::deez::{DeezEntity, Deez};
+use lib::deez::{Deez, DeezEntity};
 use lib::discord::{Embed, Field, InteractionBody, ResponseData};
 use lib::entity::prediction::Prediction;
 
 pub async fn create(d: &Deez, b: &InteractionBody) -> Result<ResponseData, Error> {
-    let condition = get_option_value(b, "namce")?.to_string()?;
+    let condition = get_option_value(b, "namce")?
+        .string()
+        .ok_or("unexpected value type")?;
 
     // todo: mnemonic prediction_id
     let prediction = Prediction {
