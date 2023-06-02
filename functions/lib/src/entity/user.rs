@@ -1,11 +1,13 @@
 use crate::dynamo::{Attribute, DdbEntity, EntityInfo, Index, Key};
 use aws_sdk_dynamodb::types::AttributeValue;
 use maplit::hashmap;
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::env;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Deserialize)]
 pub struct User {
+    #[serde(rename(deserialize = "id"))]
     pub user_id: Option<String>,
     pub username: Option<String>,
     pub discriminator: Option<String>,

@@ -1,26 +1,12 @@
 use aws_sdk_lambda::types::InvocationType;
 use aws_smithy_types::Blob;
 use ed25519_dalek::{PublicKey, Signature, Verifier};
-use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
+use lambda_http::{run, service_fn, Body, Error, Request, Response};
+use lib::discord::{InteractionBody, ResponseBody};
 use lib::service::make_lambda_client;
-use serde::{Deserialize, Serialize};
 use serde_json;
 use std::env;
 
-#[derive(Serialize, Deserialize, Debug)]
-struct InteractionBody {
-    application_id: String,
-    id: String,
-    token: String,
-    #[serde(rename(deserialize = "type"))]
-    interaction_type: usize,
-    version: usize,
-}
-
-/// This is the main body for the function.
-/// Write your code inside it.
-/// There are some code example in the following URLs:
-/// - https://github.com/awslabs/aws-lambda-rust-runtime/tree/main/examples
 async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
     let body_text = match event.body() {
         Body::Text(t) => t,
@@ -66,8 +52,8 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
         };
     }
 
-    let lc = make_lambda_client().await;
-    let _r = lc
+    let lambda_client = make_lambda_client().await;
+    lambda_client
         .invoke()
         .function_name(env::var("CONSUMERFN_ARN")?)
         .invocation_type(InvocationType::Event)
@@ -75,31 +61,24 @@ async fn function_handler(event: Request) -> Result<Response<Body>, Error> {
         .send()
         .await?;
 
-    // todo: VV deferred response VV
-    // Extract some useful information from the request
-    let who = event
-        .query_string_parameters_ref()
-        .and_then(|params| params.first("name"))
-        .unwrap_or("world");
-    let message = format!("Hello {who}, this is an AWS Lambda HTTP request");
-
-    // Return something that implements IntoResponse.
-    // It will be serialized to the right response event automatically by the runtime
-    let resp = Response::builder()
+    Ok(Response::builder()
         .status(200)
-        .header("content-type", "text/html")
-        .body(message.into())
-        .map_err(Box::new)?;
-    Ok(resp)
+        .header("content-type", "application/json")
+        .body(
+            serde_json::to_string(&ResponseBody {
+                response_type: 5,
+                ..Default::default()
+            })?
+            .into(),
+        )
+        .map_err(Box::new)?)
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
-        // disable printing the name of the module in every log line.
         .with_target(false)
-        // disabling time is handy because CloudWatch will add the ingestion time.
         .without_time()
         .init();
 
