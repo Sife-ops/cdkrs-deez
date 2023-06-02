@@ -1,4 +1,5 @@
 mod commands;
+mod common;
 
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
 use lib::discord::InteractionBody;
@@ -8,28 +9,22 @@ use lib::service::make_dynamo_client;
 use std::env;
 use ureq;
 
-async fn function_handler(event: LambdaEvent<InteractionBody>) -> Result<(), Error> {
-    let deez = Deez::new(make_dynamo_client().await);
-    onboard(
-        &deez,
-        event
-            .payload
-            .member
-            .as_ref()
-            .unwrap()
-            .user
-            .as_ref()
-            .unwrap(),
-    )
-    .await;
+fn get_command_name(e: &InteractionBody) -> Result<&String, Error> {
+    Ok(&e.data.as_ref().ok_or("missing command name")?.name)
+}
 
-    let res = match event.payload.data.as_ref().unwrap().name.as_str() {
-        "foo" => commands::foo::foo(&event.payload).await,
+async fn function_handler(event: LambdaEvent<InteractionBody>) -> Result<(), Error> {
+    let deez = &Deez::new(make_dynamo_client().await);
+    onboard(deez, common::get_member_user(&event.payload)?).await;
+
+    let res = match get_command_name(&event.payload)?.as_str() {
+        "foo" => commands::foo::foo(&event.payload).await?,
+        "create" => commands::create::create(deez, &event.payload).await?,
         &_ => panic!("unknown command name"),
     };
 
-    let a = ureq::agent();
-    let b = a
+    let agent = ureq::agent();
+    agent
         .post(&format!(
             "https://discord.com/api/v10/webhooks/{}/{}",
             env::var("BOT_APP_ID")?,
@@ -39,7 +34,6 @@ async fn function_handler(event: LambdaEvent<InteractionBody>) -> Result<(), Err
         .set("Authorization", &env::var("BOT_PUBLIC_KEY")?)
         .send_string(&serde_json::to_string(&res)?)?
         .into_string()?;
-    println!("{}", b);
 
     Ok(())
 }

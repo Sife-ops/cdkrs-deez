@@ -1,7 +1,7 @@
 use crate::entity::user::User;
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct InteractionBody {
     pub application_id: String,
     pub id: String,
@@ -9,16 +9,16 @@ pub struct InteractionBody {
     #[serde(rename(deserialize = "type"))]
     pub interaction_type: usize,
     pub version: usize,
-    pub member: Option<Member>, // todo: remove option
+    pub member: Option<Member>,        // todo: remove option
     pub data: Option<InteractionData>, // todo: remove option
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Member {
-    pub user: Option<User>,
+    pub user: User,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct InteractionData {
     pub guild_id: String,
     pub id: String,
@@ -28,12 +28,41 @@ pub struct InteractionData {
     pub options: Option<Vec<CommandOption>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct CommandOption {
     pub name: String,
     #[serde(rename(deserialize = "type"))]
     pub option_type: usize,
-    // todo: value
+    pub value: CommandOptionValue,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(untagged)]
+pub enum CommandOptionValue {
+    STRING(String),
+    USER(String),
+    INTEGER(isize),
+}
+
+#[derive(Debug, Clone)]
+pub struct CommandOptionValueError;
+impl std::fmt::Display for CommandOptionValueError {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "unexpected value type")
+    }
+}
+impl std::error::Error for CommandOptionValueError {
+    // todo: definitions
+}
+
+impl CommandOptionValue {
+    // todo: not a real "to_string" method, change name
+    pub fn to_string(&self) -> Result<&String, CommandOptionValueError> {
+        if let Self::STRING(a) = self {
+            return Ok(a);
+        }
+        Err(CommandOptionValueError)
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
