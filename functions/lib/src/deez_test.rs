@@ -26,7 +26,7 @@ mod dynamo_test {
 
         fn index_schemas(&self) -> HashMap<Index, IndexSchema> {
             hashmap! {
-                Index::Primary => {
+                indexes::PRIMARY => {
                     IndexSchema {
                         partition_key: Key {
                             field: format!("pk"),

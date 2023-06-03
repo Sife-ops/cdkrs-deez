@@ -21,14 +21,14 @@ impl DeezEntity for Prediction {
     fn info(&self) -> EntityInfo {
         EntityInfo {
             table: env::var("TABLE_NAME").unwrap_or(format!("MISSING")),
-            service: format!("Cdkrs"),
+            service: format!("Glsst"),
             entity: format!("Prediction"),
         }
     }
 
     fn index_schemas(&self) -> HashMap<Index, IndexSchema> {
         hashmap! {
-            Index::Primary => {
+            indexes::PRIMARY => {
                 IndexSchema {
                     partition_key: Key {
                         field: format!("pk"),

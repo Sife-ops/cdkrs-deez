@@ -1,7 +1,8 @@
 use crate::common::{get_memeber_user_id, get_option_value};
 use lambda_runtime::Error;
-use lib::deez::{Deez, DeezEntity, Index};
+use lib::deez::{Deez, DeezEntity};
 use lib::discord::{Embed, Field, InteractionBody, ResponseData};
+use lib::entity::indexes;
 use lib::entity::prediction::Prediction;
 
 pub async fn create(d: &Deez, b: &InteractionBody) -> Result<ResponseData, Error> {
@@ -16,7 +17,7 @@ pub async fn create(d: &Deez, b: &InteractionBody) -> Result<ResponseData, Error
             condition: condition.to_string(),
             ..Prediction::generated_values()
         };
-        let res = d.query(Index::Primary, &prediction).send().await?;
+        let res = d.query(indexes::PRIMARY, &prediction).send().await?;
         if res.items().ok_or("missing items slice")?.len() < 1 {
             break;
         }
