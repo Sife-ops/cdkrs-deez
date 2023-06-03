@@ -40,7 +40,7 @@ impl Key {
 #[derive(Debug, Clone)]
 pub enum Attribute {
     DeezString(String),
-    DeezNumber(i64),
+    DeezNumber(isize),
     DeezBoolean(bool),
 }
 
@@ -60,16 +60,6 @@ impl std::fmt::Display for Attribute {
     }
 }
 
-// impl Attribute {
-//     fn to_string(&self) -> &String {
-//         match self {
-//             Attribute::DeezString(y) => y,
-//             Attribute::DeezNumber(y) => Some(y.clone()?.to_string()),
-//             Attribute::DeezBoolean(y) => Some(y.clone()?.to_string()),
-//         }
-//     }
-// }
-
 #[derive(PartialEq)]
 pub enum GeneratedValues {
     Use,
@@ -85,7 +75,6 @@ pub trait DeezEntity {
 
     fn generated_values() -> Self;
 
-    // fn to_map(&self, default: &GeneratedValues) -> HashMap<String, AttributeValue>
     fn to_map(&self) -> HashMap<String, AttributeValue> {
         let mut m = HashMap::new();
         m.insert(
@@ -95,22 +84,6 @@ pub trait DeezEntity {
 
         // attributes
         let attrs = &self.attributes();
-
-        // crap
-        // if default == &GeneratedValues::Use {
-        //     let def_attrs = &Self::generated_values().attributes();
-        //     for (k, v) in attrs.clone() {
-        //         if v.string_or_none().is_none() {
-        //             let def_attr = def_attrs.get(&k).unwrap();
-        //             if def_attr.string_or_none().is_some() {
-        //                 attrs
-        //                     .entry(k.to_string())
-        //                     .and_modify(|e| *e = def_attr.clone());
-        //             }
-        //         }
-        //     }
-        // }
-
         for (k, attr) in attrs {
             match attr {
                 Attribute::DeezString(x) => {
@@ -192,13 +165,22 @@ impl Deez {
         // todo: verify the index composites exist in av
         let av = e.to_map();
 
-        self.client
+        let mut request = self
+            .client
             .query()
             .table_name(e.info().table)
             .key_condition_expression(format!("#{pkf} = :{pkf} and begins_with(#{skf}, :{skf})"))
             .expression_attribute_names(format!("#{pkf}"), &pkf)
             .expression_attribute_names(format!("#{skf}"), &skf)
             .expression_attribute_values(format!(":{pkf}"), av.get(&pkf).unwrap().clone())
-            .expression_attribute_values(format!(":{skf}"), av.get(&skf).unwrap().clone())
+            .expression_attribute_values(format!(":{skf}"), av.get(&skf).unwrap().clone());
+
+        // todo: WARANING! EXTREMELY SUS!
+        // hav 2 make index and enum bro
+        if index != "primary" {
+            request = request.index_name(index);
+        }
+
+        request
     }
 }

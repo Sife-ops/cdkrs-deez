@@ -17,10 +17,11 @@ async fn function_handler(event: LambdaEvent<InteractionBody>) -> Result<(), Err
     let deez = &Deez::new(make_dynamo_client().await);
 
     onboard(deez, common::get_member_user(&event.payload)?).await;
-    
+
     let res = match get_command_name(&event.payload)?.as_str() {
         "foo" => commands::foo::foo(&event.payload).await?,
         "create" => commands::create::create(deez, &event.payload).await?,
+        "vote" => commands::vote::vote(deez, &event.payload).await?,
         &_ => panic!("unknown command name"),
     };
 

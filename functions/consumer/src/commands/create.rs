@@ -9,11 +9,18 @@ pub async fn create(d: &Deez, b: &InteractionBody) -> Result<ResponseData, Error
         .string()
         .ok_or("unexpected value type")?;
 
-    let prediction = Prediction {
-        user_id: get_memeber_user_id(b)?.to_string(),
-        condition: condition.to_string(),
-        ..Prediction::generated_values()
-    };
+    let mut prediction: Prediction;
+    loop {
+        prediction = Prediction {
+            user_id: get_memeber_user_id(b)?.to_string(),
+            condition: condition.to_string(),
+            ..Prediction::generated_values()
+        };
+        let res = d.query("primary", &prediction).send().await?;
+        if res.items().ok_or("missing items slice")?.len() < 1 {
+            break;
+        }
+    }
 
     d.put(&prediction).send().await?;
 
