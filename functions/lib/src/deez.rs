@@ -27,8 +27,9 @@ impl Key {
     fn join_composite(&self, attrs: &HashMap<String, Attribute>) -> String {
         let mut c = String::new();
         for composite in self.composite.iter() {
-            let attr = attrs.get(composite).unwrap();
-            if let Some(s) = attr.string_or_none() {
+            let a = attrs.get(composite).unwrap();
+            let s = a.to_string();
+            if s.len() > 0 {
                 c.push_str(&format!("#{}_{}", composite, s,));
             }
         }
@@ -38,20 +39,36 @@ impl Key {
 
 #[derive(Debug, Clone)]
 pub enum Attribute {
-    DdbString(Option<String>),
-    DdbNumber(Option<i64>),
-    DdbBoolean(Option<bool>),
+    DeezString(String),
+    DeezNumber(i64),
+    DeezBoolean(bool),
 }
 
-impl Attribute {
-    fn string_or_none(&self) -> Option<String> {
+impl std::fmt::Display for Attribute {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Attribute::DdbString(y) => y.clone(),
-            Attribute::DdbNumber(y) => Some(y.clone()?.to_string()),
-            Attribute::DdbBoolean(y) => Some(y.clone()?.to_string()),
+            Attribute::DeezString(x) => {
+                write!(f, "{}", x)
+            }
+            Attribute::DeezNumber(x) => {
+                write!(f, "{}", x)
+            }
+            Attribute::DeezBoolean(x) => {
+                write!(f, "{}", x)
+            }
         }
     }
 }
+
+// impl Attribute {
+//     fn to_string(&self) -> &String {
+//         match self {
+//             Attribute::DeezString(y) => y,
+//             Attribute::DeezNumber(y) => Some(y.clone()?.to_string()),
+//             Attribute::DeezBoolean(y) => Some(y.clone()?.to_string()),
+//         }
+//     }
+// }
 
 #[derive(PartialEq)]
 pub enum GeneratedValues {
@@ -94,22 +111,16 @@ pub trait DeezEntity {
         //     }
         // }
 
-        for (name, attr) in attrs {
+        for (k, attr) in attrs {
             match attr {
-                Attribute::DdbString(v) => {
-                    if let Some(s) = v {
-                        m.insert(name.to_string(), AttributeValue::S(s.to_string()));
-                    }
+                Attribute::DeezString(x) => {
+                    m.insert(k.to_string(), AttributeValue::S(x.to_string()));
                 }
-                Attribute::DdbBoolean(v) => {
-                    if let Some(s) = v {
-                        m.insert(name.to_string(), AttributeValue::Bool(*s));
-                    }
+                Attribute::DeezBoolean(x) => {
+                    m.insert(k.to_string(), AttributeValue::Bool(*x));
                 }
-                Attribute::DdbNumber(v) => {
-                    if let Some(s) = v {
-                        m.insert(name.to_string(), AttributeValue::N(s.to_string()));
-                    }
+                Attribute::DeezNumber(x) => {
+                    m.insert(k.to_string(), AttributeValue::N(x.to_string()));
                 }
             };
         }

@@ -1,17 +1,18 @@
 use crate::deez::{Attribute, DeezEntity, EntityInfo, Index, Key};
 use aws_sdk_dynamodb::types::AttributeValue;
 use chrono::Utc;
+use fake::faker::company::en;
+use fake::Fake;
 use maplit::hashmap;
 use std::collections::HashMap;
 use std::env;
-use uuid::Uuid;
 
 #[derive(Default, Debug)]
 pub struct Prediction {
-    pub prediction_id: Option<String>,
-    pub user_id: Option<String>,
-    pub condition: Option<String>,
-    pub created_at: Option<String>,
+    pub prediction_id: String,
+    pub user_id: String,
+    pub condition: String,
+    pub created_at: String,
 }
 
 // todo: https://users.rust-lang.org/t/access-struct-attributes-by-string/17520/2
@@ -67,17 +68,22 @@ impl DeezEntity for Prediction {
 
     fn attributes(&self) -> HashMap<String, Attribute> {
         hashmap! {
-            format!("predictionid") => Attribute::DdbString(self.prediction_id.clone()),
-            format!("userid") => Attribute::DdbString(self.user_id.clone()),
-            format!("condition") => Attribute::DdbString(self.condition.clone()),
-            format!("createdat") => Attribute::DdbString(self.created_at.clone()),
+            format!("predictionid") => Attribute::DeezString(self.prediction_id.clone()),
+            format!("userid") => Attribute::DeezString(self.user_id.clone()),
+            format!("condition") => Attribute::DeezString(self.condition.clone()),
+            format!("createdat") => Attribute::DeezString(self.created_at.clone()),
         }
     }
 
     fn generated_values() -> Self {
         Prediction {
-            prediction_id: Some(Uuid::new_v4().to_string()),
-            created_at: Some(Utc::now().to_rfc3339()),
+            prediction_id: format!(
+                "{}-{}-{}",
+                en::BsAdj().fake::<String>(),
+                en::BsAdj().fake::<String>(),
+                en::BsNoun().fake::<String>()
+            ),
+            created_at: Utc::now().to_rfc3339(),
             ..Default::default()
         }
     }
@@ -88,10 +94,10 @@ impl DeezEntity for Prediction {
         };
         for (k, v) in m {
             match k.as_str() {
-                "predictionid" => d.prediction_id = Some(v.as_s().unwrap().clone()),
-                "userid" => d.user_id = Some(v.as_s().unwrap().clone()),
-                "condition" => d.condition = Some(v.as_s().unwrap().clone()),
-                "createdat" => d.created_at = Some(v.as_s().unwrap().clone()),
+                "predictionid" => d.prediction_id = v.as_s().unwrap().clone(),
+                "userid" => d.user_id = v.as_s().unwrap().clone(),
+                "condition" => d.condition = v.as_s().unwrap().clone(),
+                "createdat" => d.created_at = v.as_s().unwrap().clone(),
                 &_ => {}
             }
         }

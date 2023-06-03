@@ -15,8 +15,9 @@ fn get_command_name(e: &InteractionBody) -> Result<&String, Error> {
 
 async fn function_handler(event: LambdaEvent<InteractionBody>) -> Result<(), Error> {
     let deez = &Deez::new(make_dynamo_client().await);
-    onboard(deez, common::get_member_user(&event.payload)?).await;
 
+    onboard(deez, common::get_member_user(&event.payload)?).await;
+    
     let res = match get_command_name(&event.payload)?.as_str() {
         "foo" => commands::foo::foo(&event.payload).await?,
         "create" => commands::create::create(deez, &event.payload).await?,

@@ -7,10 +7,7 @@ pub fn get_member_user(e: &InteractionBody) -> Result<&User, Error> {
 }
 
 pub fn get_memeber_user_id(e: &InteractionBody) -> Result<&String, Error> {
-    Ok(get_member_user(e)?
-        .user_id
-        .as_ref()
-        .ok_or("missing user_id")?)
+    Ok(&get_member_user(e)?.user_id)
 }
 
 pub fn get_option_value<'a>(

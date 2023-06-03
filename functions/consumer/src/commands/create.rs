@@ -5,14 +5,13 @@ use lib::discord::{Embed, Field, InteractionBody, ResponseData};
 use lib::entity::prediction::Prediction;
 
 pub async fn create(d: &Deez, b: &InteractionBody) -> Result<ResponseData, Error> {
-    let condition = get_option_value(b, "namce")?
+    let condition = get_option_value(b, "condition")?
         .string()
         .ok_or("unexpected value type")?;
 
-    // todo: mnemonic prediction_id
     let prediction = Prediction {
-        user_id: Some(get_memeber_user_id(b)?.to_string()),
-        condition: Some(condition.to_string()),
+        user_id: get_memeber_user_id(b)?.to_string(),
+        condition: condition.to_string(),
         ..Prediction::generated_values()
     };
 
@@ -30,10 +29,7 @@ pub async fn create(d: &Deez, b: &InteractionBody) -> Result<ResponseData, Error
                 },
                 Field {
                     name: Some(format!("ID")),
-                    value: Some(format!(
-                        "{}",
-                        prediction.prediction_id.ok_or("missing prediction_id")?
-                    )),
+                    value: Some(format!("{}", prediction.prediction_id,)),
                     inline: Some(false),
                 },
             ]),

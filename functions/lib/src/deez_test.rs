@@ -9,9 +9,9 @@ mod dynamo_test {
 
     #[derive(Default, Debug)]
     struct TestStruct {
-        primary_id: Option<String>,
-        foreign_id: Option<String>,
-        created_at: Option<String>,
+        primary_id: String,
+        foreign_id: String,
+        created_at: String,
     }
 
     impl DeezEntity for TestStruct {
@@ -66,16 +66,16 @@ mod dynamo_test {
 
         fn attributes(&self) -> HashMap<String, Attribute> {
             hashmap! {
-                format!("primaryid") => Attribute::DdbString(self.primary_id.clone()),
-                format!("foreignid") => Attribute::DdbString(self.foreign_id.clone()),
-                format!("createdat") => Attribute::DdbString(self.created_at.clone()),
+                format!("primaryid") => Attribute::DeezString(self.primary_id.clone()),
+                format!("foreignid") => Attribute::DeezString(self.foreign_id.clone()),
+                format!("createdat") => Attribute::DeezString(self.created_at.clone()),
             }
         }
 
         fn generated_values() -> Self {
             TestStruct {
-                primary_id: Some(Uuid::new_v4().to_string()),
-                created_at: Some(Utc::now().to_rfc3339()),
+                primary_id: Uuid::new_v4().to_string(),
+                created_at: Utc::now().to_rfc3339(),
                 ..Default::default()
             }
         }
@@ -86,9 +86,9 @@ mod dynamo_test {
             };
             for (k, v) in m {
                 match k.as_str() {
-                    "primaryid" => d.primary_id = Some(v.as_s().unwrap().clone()), // todo: clone or to_string
-                    "foreignid" => d.foreign_id = Some(v.as_s().unwrap().clone()),
-                    "createdat" => d.created_at = Some(v.as_s().unwrap().clone()),
+                    "primaryid" => d.primary_id = v.as_s().unwrap().clone(), // todo: clone or to_string
+                    "foreignid" => d.foreign_id = v.as_s().unwrap().clone(),
+                    "createdat" => d.created_at = v.as_s().unwrap().clone(),
                     &_ => {}
                 }
             }
@@ -111,7 +111,7 @@ mod dynamo_test {
     fn e2m1() {
         let fid = Uuid::new_v4().to_string();
         let a = TestStruct {
-            foreign_id: Some(fid.clone()),
+            foreign_id: fid.clone(),
             ..TestStruct::generated_values()
         };
         println!("");

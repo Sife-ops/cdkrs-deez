@@ -8,12 +8,12 @@ use std::env;
 #[derive(Default, Debug, Deserialize, Clone)]
 pub struct User {
     #[serde(rename(deserialize = "id"))]
-    pub user_id: Option<String>,
-    pub username: Option<String>,
-    pub discriminator: Option<String>,
+    pub user_id: String,
+    pub username: String,
+    pub discriminator: String,
     pub display_name: Option<String>,
     pub global_name: Option<String>,
-    pub avatar: Option<String>,
+    pub avatar: String,
 }
 
 // todo: https://users.rust-lang.org/t/access-struct-attributes-by-string/17520/2
@@ -57,12 +57,12 @@ impl DeezEntity for User {
 
     fn attributes(&self) -> HashMap<String, Attribute> {
         hashmap! {
-            format!("userid") => Attribute::DdbString(self.user_id.clone()),
-            format!("username") => Attribute::DdbString(self.username.clone()),
-            format!("discriminator") => Attribute::DdbString(self.discriminator.clone()),
-            format!("displayname") => Attribute::DdbString(self.display_name.clone()),
-            format!("globalname") => Attribute::DdbString(self.global_name.clone()),
-            format!("avatar") => Attribute::DdbString(self.avatar.clone()),
+            format!("userid") => Attribute::DeezString(self.user_id.clone()),
+            format!("username") => Attribute::DeezString(self.username.clone()),
+            format!("discriminator") => Attribute::DeezString(self.discriminator.clone()),
+            format!("displayname") => Attribute::DeezString(self.display_name.as_ref().unwrap_or(&format!("")).to_string()),
+            format!("globalname") => Attribute::DeezString(self.global_name.as_ref().unwrap_or(&format!("")).to_string()),
+            format!("avatar") => Attribute::DeezString(self.avatar.clone()),
         }
     }
 
@@ -78,12 +78,12 @@ impl DeezEntity for User {
         };
         for (k, v) in m {
             match k.as_str() {
-                "userid" => d.user_id = Some(v.as_s().unwrap().clone()),
-                "username" => d.username = Some(v.as_s().unwrap().clone()),
-                "discriminator" => d.discriminator = Some(v.as_s().unwrap().clone()),
+                "userid" => d.user_id = v.as_s().unwrap().clone(),
+                "username" => d.username = v.as_s().unwrap().clone(),
+                "discriminator" => d.discriminator = v.as_s().unwrap().clone(),
                 "displayname" => d.display_name = Some(v.as_s().unwrap().clone()),
                 "globalname" => d.global_name = Some(v.as_s().unwrap().clone()),
-                "avatar" => d.avatar = Some(v.as_s().unwrap().clone()),
+                "avatar" => d.avatar = v.as_s().unwrap().clone(),
                 &_ => {}
             }
         }
