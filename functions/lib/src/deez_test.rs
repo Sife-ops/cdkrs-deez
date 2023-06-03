@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod dynamo_test {
-    use crate::deez::{Attribute, DeezEntity, EntityInfo, Index, Key};
+    use crate::deez::{Attribute, DeezEntity, EntityInfo, Index, IndexSchema, Key};
+    use crate::entity::indexes;
     use aws_sdk_dynamodb::types::AttributeValue;
     use chrono::Utc;
     use maplit::hashmap;
@@ -23,10 +24,10 @@ mod dynamo_test {
             }
         }
 
-        fn index_schema(&self) -> HashMap<String, Index> {
+        fn index_schemas(&self) -> HashMap<Index, IndexSchema> {
             hashmap! {
-                format!("primary") => {
-                    Index {
+                Index::Primary => {
+                    IndexSchema {
                         partition_key: Key {
                             field: format!("pk"),
                             composite: vec![format!("primaryid")],
@@ -37,8 +38,8 @@ mod dynamo_test {
                         },
                     }
                 },
-                format!("gsi1") => {
-                    Index {
+                indexes::GSI1 => {
+                    IndexSchema {
                         partition_key: Key {
                             field: format!("gsi1pk"),
                             composite: vec![format!("foreignid")],
@@ -49,8 +50,8 @@ mod dynamo_test {
                         },
                     }
                 },
-                format!("gsi2") => {
-                    Index {
+                indexes::GSI2 => {
+                    IndexSchema {
                         partition_key: Key {
                             field: format!("gsi2pk"),
                             composite: vec![format!("primaryid"), format!("foreignid")],

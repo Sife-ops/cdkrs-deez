@@ -12,7 +12,7 @@ pub struct EntityInfo {
 }
 
 #[derive(Debug)]
-pub struct Index {
+pub struct IndexSchema {
     pub partition_key: Key,
     pub sort_key: Key,
 }
@@ -69,7 +69,7 @@ pub enum GeneratedValues {
 pub trait DeezEntity {
     fn info(&self) -> EntityInfo;
 
-    fn index_schema(&self) -> HashMap<String, Index>;
+    fn index_schemas(&self) -> HashMap<Index, IndexSchema>;
 
     fn attributes(&self) -> HashMap<String, Attribute>;
 
@@ -99,7 +99,7 @@ pub trait DeezEntity {
         }
 
         // indexes
-        let is = self.index_schema();
+        let is = self.index_schemas();
         for (_, index) in &is {
             // partition key
             m.insert(
@@ -148,39 +148,90 @@ impl Deez {
         Self { client: c }
     }
 
-    pub fn put(&self, e: &impl DeezEntity) -> PutItemFluentBuilder {
-        let mut req = self.client.put_item().table_name(e.info().table);
-        let m = e.to_map();
+    pub fn put(&self, entity: &impl DeezEntity) -> PutItemFluentBuilder {
+        let mut req = self.client.put_item().table_name(entity.info().table);
+        let m = entity.to_map();
         for (k, v) in &m {
             req = req.item(k, v.clone());
         }
         req
     }
 
-    pub fn query(&self, index: &str, e: &impl DeezEntity) -> QueryFluentBuilder {
-        let is = e.index_schema();
-        let i = is.get(index).unwrap();
+    pub fn query(&self, index: Index, entity: &impl DeezEntity) -> QueryFluentBuilder {
+        let is = entity.index_schemas();
+        let i = is.get(&index).unwrap();
         let pkf = i.partition_key.field.clone();
         let skf = i.sort_key.field.clone();
         // todo: verify the index composites exist in av
-        let av = e.to_map();
+        let av = entity.to_map();
 
         let mut request = self
             .client
             .query()
-            .table_name(e.info().table)
+            .table_name(entity.info().table)
             .key_condition_expression(format!("#{pkf} = :{pkf} and begins_with(#{skf}, :{skf})"))
             .expression_attribute_names(format!("#{pkf}"), &pkf)
             .expression_attribute_names(format!("#{skf}"), &skf)
             .expression_attribute_values(format!(":{pkf}"), av.get(&pkf).unwrap().clone())
             .expression_attribute_values(format!(":{skf}"), av.get(&skf).unwrap().clone());
 
-        // todo: WARANING! EXTREMELY SUS!
-        // hav 2 make index and enum bro
-        if index != "primary" {
-            request = request.index_name(index);
+        if index != Index::Primary {
+            request = request.index_name(index.to_string());
         }
 
         request
+    }
+}
+
+#[derive(Eq, Hash, PartialEq)]
+pub enum Index<'a> {
+    Primary,
+    Gsi1(&'a str),
+    Gsi2(&'a str),
+    Gsi3(&'a str),
+    Gsi4(&'a str),
+    Gsi5(&'a str),
+    Gsi6(&'a str),
+    Gsi7(&'a str),
+    Gsi8(&'a str),
+    Gsi9(&'a str),
+    Gsi10(&'a str),
+    Gsi11(&'a str),
+    Gsi12(&'a str),
+    Gsi13(&'a str),
+    Gsi14(&'a str),
+    Gsi15(&'a str),
+    Gsi16(&'a str),
+    Gsi17(&'a str),
+    Gsi18(&'a str),
+    Gsi19(&'a str),
+    Gsi20(&'a str),
+}
+
+impl std::fmt::Display for Index<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Index::Primary => write!(f, "primary"),
+            Index::Gsi1(x) => write!(f, "{}", x),
+            Index::Gsi2(x) => write!(f, "{}", x),
+            Index::Gsi3(x) => write!(f, "{}", x),
+            Index::Gsi4(x) => write!(f, "{}", x),
+            Index::Gsi5(x) => write!(f, "{}", x),
+            Index::Gsi6(x) => write!(f, "{}", x),
+            Index::Gsi7(x) => write!(f, "{}", x),
+            Index::Gsi8(x) => write!(f, "{}", x),
+            Index::Gsi9(x) => write!(f, "{}", x),
+            Index::Gsi10(x) => write!(f, "{}", x),
+            Index::Gsi11(x) => write!(f, "{}", x),
+            Index::Gsi12(x) => write!(f, "{}", x),
+            Index::Gsi13(x) => write!(f, "{}", x),
+            Index::Gsi14(x) => write!(f, "{}", x),
+            Index::Gsi15(x) => write!(f, "{}", x),
+            Index::Gsi16(x) => write!(f, "{}", x),
+            Index::Gsi17(x) => write!(f, "{}", x),
+            Index::Gsi18(x) => write!(f, "{}", x),
+            Index::Gsi19(x) => write!(f, "{}", x),
+            Index::Gsi20(x) => write!(f, "{}", x),
+        }
     }
 }

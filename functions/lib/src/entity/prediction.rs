@@ -1,4 +1,5 @@
-use crate::deez::{Attribute, DeezEntity, EntityInfo, Index, Key};
+use crate::deez::{Attribute, DeezEntity, EntityInfo, Index, IndexSchema, Key};
+use crate::entity::indexes;
 use aws_sdk_dynamodb::types::AttributeValue;
 use chrono::Utc;
 use fake::faker::company::en;
@@ -25,10 +26,10 @@ impl DeezEntity for Prediction {
         }
     }
 
-    fn index_schema(&self) -> HashMap<String, Index> {
+    fn index_schemas(&self) -> HashMap<Index, IndexSchema> {
         hashmap! {
-            format!("primary") => {
-                Index {
+            Index::Primary => {
+                IndexSchema {
                     partition_key: Key {
                         field: format!("pk"),
                         composite: vec![format!("predictionid")],
@@ -39,8 +40,8 @@ impl DeezEntity for Prediction {
                     },
                 }
             },
-            format!("gsi1") => {
-                Index {
+            indexes::GSI1 => {
+                IndexSchema {
                     partition_key: Key {
                         field: format!("gsi1pk"),
                         composite: vec![format!("userid")],
@@ -51,8 +52,8 @@ impl DeezEntity for Prediction {
                     },
                 }
             },
-            format!("gsi2") => {
-                Index {
+            indexes::GSI2 => {
+                IndexSchema {
                     partition_key: Key {
                         field: format!("gsi2pk"),
                         composite: vec![format!("predictionid")],

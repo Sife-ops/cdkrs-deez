@@ -1,7 +1,8 @@
 use crate::common::{get_memeber_user_id, get_option_value};
 use lambda_runtime::Error;
-use lib::deez::{Deez, DeezEntity};
+use lib::deez::{Deez, DeezEntity, Index};
 use lib::discord::{Embed, Field, InteractionBody, ResponseData};
+use lib::entity::indexes;
 use lib::entity::prediction::Prediction;
 use lib::entity::voter::Voter;
 
@@ -17,7 +18,7 @@ pub async fn vote(d: &Deez, b: &InteractionBody) -> Result<ResponseData, Error> 
     // prediction must exist
     let predictions_query = d
         .query(
-            "primary",
+            Index::Primary,
             &Prediction {
                 prediction_id: prediction_id.to_string(),
                 ..Default::default()
@@ -53,7 +54,7 @@ pub async fn vote(d: &Deez, b: &InteractionBody) -> Result<ResponseData, Error> 
     // prevent double voting
     let voters_query = d
         .query(
-            "gsi1",
+            indexes::GSI1,
             &Voter {
                 user_id: user_id.to_string(),
                 prediction_id: prediction_id.to_string(),
