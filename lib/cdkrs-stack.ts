@@ -109,7 +109,7 @@ export class CdkrsStack extends cdk.Stack {
     const receiverFn = new RustFunction(this, "receiver", {
       manifestPath: "functions/receiver/Cargo.toml",
       environment: {
-        TABLE_NAME: table.tableName,
+        TABLE_NAME: table.tableName, // todo: remove?
         CONSUMERFN_ARN: consumerFn.functionArn,
         // CONSUMERFN_NAME: consumerFn.functionName,
       },
