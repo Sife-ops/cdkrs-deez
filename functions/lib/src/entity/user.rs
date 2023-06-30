@@ -13,7 +13,8 @@ pub struct User {
     #[deez_gsi1(key = "hash")]
     pub userid: Option<String>,
     pub username: String,
-    pub discriminator: Option<String>,
-    pub global_name: Option<String>,
+    pub discriminator: String,
+    #[serde(rename(deserialize = "global_name"))]
+    pub globalname: String,
     pub avatar: String,
 }

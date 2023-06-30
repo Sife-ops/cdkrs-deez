@@ -25,6 +25,7 @@ pub async fn vote(
     }
     .primary_keys();
 
+    // exists
     let predictions = vec_from_query!(
         client
             .query()
