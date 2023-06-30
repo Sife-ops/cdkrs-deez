@@ -2,9 +2,7 @@ mod commands;
 mod common;
 
 use lambda_runtime::{run, service_fn, Error, LambdaEvent};
-use lib::deez::Deez;
 use lib::discord::InteractionBody;
-use lib::onboard::onboard;
 use lib::service::make_dynamo_client;
 use std::env;
 use ureq;
@@ -14,14 +12,15 @@ fn get_command_name(e: &InteractionBody) -> Result<&String, Error> {
 }
 
 async fn function_handler(event: LambdaEvent<InteractionBody>) -> Result<(), Error> {
-    let deez = &Deez::new(make_dynamo_client().await);
+    let dynamodb_client = &make_dynamo_client().await;
 
-    onboard(deez, common::get_member_user(&event.payload)?).await;
+    // todo: macro?
+    // onboard(deez, common::get_member_user(&event.payload)?).await;
 
     let res = match get_command_name(&event.payload)?.as_str() {
         "foo" => commands::foo::foo(&event.payload).await?,
-        "create" => commands::create::create(deez, &event.payload).await?,
-        "vote" => commands::vote::vote(deez, &event.payload).await?,
+        "create" => commands::create::create(dynamodb_client, &event.payload).await?,
+        "vote" => commands::vote::vote(dynamodb_client, &event.payload).await?,
         &_ => panic!("unknown command name"),
     };
 

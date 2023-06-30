@@ -15,7 +15,8 @@ edition = "2021"
 # and it will keep the alphabetic ordering for you.
 
 [dependencies]
-
+aws-sdk-dynamodb = "0.28.0"
+deez = "0.3.0"
 lambda_runtime = "0.8.0"
 lib = { path = "../lib" }
 serde = "1.0.136"

@@ -1,37 +1,50 @@
 use crate::common::{get_memeber_user_id, get_option_value};
+use aws_sdk_dynamodb::Client;
+use deez::{create, vec_from_query};
 use lambda_runtime::Error;
-use lib::deez::{Deez, DeezEntity};
 use lib::discord::{Embed, Field, InteractionBody, ResponseData};
-use lib::entity::indexes;
-use lib::entity::prediction::Prediction;
-use lib::entity::voter::Voter;
+use lib::entity::prediction::{Prediction, PredictionItems};
+use lib::entity::voter::{Voter, VoterItems};
+use std::collections::HashMap;
 
-pub async fn vote(d: &Deez, b: &InteractionBody) -> Result<ResponseData, Error> {
-    let user_id = get_memeber_user_id(b)?;
-    let prediction_id = get_option_value(b, "id")?
+pub async fn vote(
+    client: &Client,
+    interaction_body: &InteractionBody,
+) -> Result<ResponseData, Error> {
+    let user_id = get_memeber_user_id(interaction_body)?;
+    let prediction_id = get_option_value(interaction_body, "id")?
         .string()
         .ok_or("unexpected value type")?;
-    let vote = get_option_value(b, "vote")?
+    let vote = get_option_value(interaction_body, "vote")?
         .boolean()
         .ok_or("unexpected value type")?;
 
-    // prediction must exist
-    let predictions_query = d
-        .query(
-            indexes::PRIMARY,
-            &Prediction {
-                prediction_id: prediction_id.to_string(),
-                ..Default::default()
-            },
-        )
-        .send()
-        .await?;
-    if predictions_query
-        .items()
-        .ok_or("missing predictions slice")?
-        .len()
-        < 1
-    {
+    let prediction_keys = Prediction {
+        predictionid: Some(prediction_id.to_string()),
+        ..Default::default()
+    }
+    .primary_keys();
+
+    let predictions = vec_from_query!(
+        client
+            .query()
+            .table_name(Prediction::table_name())
+            .key_condition_expression("#pk = :pk and begins_with(#sk, :sk)")
+            .set_expression_attribute_names(Some(HashMap::from([
+                ("#pk".to_string(), prediction_keys.hash.field()),
+                ("#sk".to_string(), prediction_keys.range.field()),
+            ])))
+            .set_expression_attribute_values(Some(HashMap::from([
+                (":pk".to_string(), prediction_keys.hash.av()),
+                (":sk".to_string(), prediction_keys.range.av()),
+            ])))
+            .send()
+            .await?
+
+        => PredictionItems
+    );
+
+    if predictions.len() < 1 {
         return Ok(ResponseData {
             content: Some(format!("<@{user_id}> voted on a nonexistent prediction.")),
             ..Default::default()
@@ -39,10 +52,8 @@ pub async fn vote(d: &Deez, b: &InteractionBody) -> Result<ResponseData, Error> 
     }
 
     // no self vote
-    let predictions = Prediction::from_map_slice(predictions_query.items().unwrap());
     let prediction = predictions.first().unwrap();
-    if prediction.user_id == *user_id {
-        // todo: sussy
+    if prediction.userid.as_ref().unwrap() == &user_id {
         return Ok(ResponseData {
             content: Some(format!(
                 "<@{user_id}> tried to vote on xis/xer own prediction."
@@ -52,33 +63,50 @@ pub async fn vote(d: &Deez, b: &InteractionBody) -> Result<ResponseData, Error> 
     }
 
     // prevent double voting
-    let voters_query = d
-        .query(
-            indexes::GSI1,
-            &Voter {
-                user_id: user_id.to_string(),
-                prediction_id: prediction_id.to_string(),
-                ..Default::default()
-            },
-        )
-        .send()
-        .await?;
-    if voters_query.items().unwrap().len() > 0 {
+    let voter_keys = Voter {
+        userid: Some(user_id.to_string()),
+        predictionid: Some(prediction_id.to_string()),
+        ..Default::default()
+    }
+    .primary_keys();
+
+    let voters = vec_from_query!(
+        client
+            .query()
+            .table_name(Voter::table_name())
+            .index_name(Voter::gsi1_name())
+            .key_condition_expression("#pk = :pk and begins_with(#sk, :sk)")
+            .set_expression_attribute_names(Some(HashMap::from([
+                ("#pk".to_string(), voter_keys.hash.field()),
+                ("#sk".to_string(), voter_keys.range.field()),
+            ])))
+            .set_expression_attribute_values(Some(HashMap::from([
+                (":pk".to_string(), voter_keys.hash.av()),
+                (":sk".to_string(), voter_keys.range.av()),
+            ])))
+            .send()
+            .await?
+
+        => VoterItems
+    );
+
+    if voters.len() > 0 {
         return Ok(ResponseData {
             content: Some(format!("<@{user_id}> tried to vote twice.")),
             ..Default::default()
         });
     }
 
-    // insert vote
-    d.put(&Voter {
-        prediction_id: prediction_id.to_string(),
-        user_id: user_id.to_string(),
-        vote: *vote,
-        ..Voter::generated_values()
-    })
-    .send()
-    .await?;
+    // create vote
+    create!(
+        client;
+        Voter {
+            predictionid: Some(prediction_id.to_string()),
+            userid: Some(user_id.to_string()),
+            vote: *vote,
+            ..Default::default()
+        }
+    )?;
 
     // respond
     let text: String;
@@ -98,7 +126,9 @@ pub async fn vote(d: &Deez, b: &InteractionBody) -> Result<ResponseData, Error> 
             color: Some(color),
             description: Some(format!(
                 "<@{}> voted {} <@{}>'s prediction:",
-                user_id, text, prediction.user_id
+                user_id,
+                text,
+                prediction.userid.as_ref().unwrap()
             )),
             fields: Some(vec![
                 Field {
@@ -108,7 +138,7 @@ pub async fn vote(d: &Deez, b: &InteractionBody) -> Result<ResponseData, Error> 
                 },
                 Field {
                     name: Some(format!("ID")),
-                    value: Some(prediction.prediction_id.to_string()),
+                    value: Some(prediction.predictionid.as_ref().unwrap().to_string()),
                     inline: Some(false),
                 },
             ]),

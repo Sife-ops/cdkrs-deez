@@ -10,6 +10,7 @@ aws-config = "0.55.3"
 aws-sdk-dynamodb = "0.28.0"
 aws-sdk-lambda = "0.28.0"
 chrono = "0.4.26"
+deez = "0.3.0"
 fake = "2.6.1"
 maplit = "1.0.2"
 serde = {version = "1.0.163", features = ["derive"]}
